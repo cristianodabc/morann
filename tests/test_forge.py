@@ -5,9 +5,10 @@ refused with its own name, and GitHub's repositories, folders and files are read
 
 import json
 import re
+from concurrent.futures import ThreadPoolExecutor
 from importlib.metadata import EntryPoint
 
-from fake_github import NOW, FakeGitHub, drafted, fixture
+from fake_github import HEAD, NOW, FakeGitHub, drafted, fixture
 from morann import core, forge
 from morann.github import GitHubProvider
 from support import ROOT, make_app, pr_numbers, refused, settle
@@ -225,3 +226,19 @@ async def test_capabilities_in_the_app():
             assert main.acting["plan"].action == "squash"  # merging is still offered
             await pilot.press("escape")
             assert not github.posts()
+
+
+def test_parallel_reads_while_the_fixture_changes():
+    """The app reads in parallel workers while gh calls and the tests rewrite the fake's fixture: no read ever sees a
+    half-written file, which would fail the read and drop a list refresh."""
+    data = fixture()
+    moved = [f"{n:040x}" for n in range(1, 201)]
+    data["prs"]["acme/app#7"]["heads"] = [*moved, HEAD]  # each read takes the next head and rewrites the file
+    with FakeGitHub(data) as github:
+        provider = GitHubProvider()
+        with ThreadPoolExecutor(16) as pool:
+            reads = [pool.submit(provider.head_sha, "acme/app", 7) for _ in range(200)]
+            for _ in range(20):
+                github.write(github.data())
+            heads = [read.result() for read in reads]
+    assert set(heads) <= {*moved, HEAD}, set(heads) - {*moved, HEAD}

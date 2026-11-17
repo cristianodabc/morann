@@ -22,7 +22,8 @@ def refused(error, words=""):
 
 def make_app(github, scope=None, **extra):
     """The app against a fake GitHub: its drafts and UI state in the fake's folder, the clock pinned, and links
-    printed instead of opened."""
+    printed instead of opened. The key clock stands still too: on a busy machine the pilot can take longer between
+    two keys than a chord such as gg or ]c waits, so a test that times one out moves the clock itself."""
     options = {
         "store": core.DraftStore(github.dir / "drafts"),
         "state": core.State(github.dir / "state.json"),
@@ -30,7 +31,9 @@ def make_app(github, scope=None, **extra):
         "opener": print,
         **extra,
     }
-    return Morann(scope or core.Scope(owners=("acme",)), **options)
+    app = Morann(scope or core.Scope(owners=("acme",)), **options)
+    app.main.keyclock = lambda: 0.0
+    return app
 
 
 async def settle(pilot):

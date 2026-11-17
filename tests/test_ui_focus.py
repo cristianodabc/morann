@@ -3,7 +3,9 @@
 """Tree and diff focus: ctrl+h and ctrl+l move focus between the file tree and the diff without hiding the tree, and
 the tree keeps its folded folders, cursor and current file wherever focus goes and whenever it is rebuilt."""
 
-from fake_github import FakeGitHub, long_fixture
+from textual import events
+
+from fake_github import FakeGitHub, fixture, long_fixture
 from support import make_app, settle
 
 
@@ -60,3 +62,22 @@ async def test_focus_moves_between_the_tree_and_the_diff():
                 main.file_index,
                 folders(tree),
             )
+
+
+async def test_a_late_focus_message_does_not_move_the_pane():
+    """Opening by link focuses the list on mount, then the diff. Each focus message reaches the screen through the
+    focused widget's own parents, so on a busy machine the list's can arrive last: it must not take the pane back,
+    or the pull request's arrival hands focus to the list."""
+    with FakeGitHub(fixture()) as github:
+        tui = make_app(github, opening=("acme/app", 7))
+        async with tui.run_test(size=(80, 40)) as pilot:
+            await settle(pilot)
+            main = tui.main
+            listing, diff = main.query_one("#list"), main.query_one("#diff")
+            assert tui.focused is diff and main.focus_pane == "diff"
+            main.post_message(events.DescendantFocus(listing))  # the list's message, delivered after the diff's
+            await settle(pilot)
+            assert main.focus_pane == "diff", main.focus_pane
+            main.refocus()  # what a pull request arriving does
+            await settle(pilot)
+            assert tui.focused is diff and main.focus_pane == "diff", (tui.focused, main.focus_pane)
