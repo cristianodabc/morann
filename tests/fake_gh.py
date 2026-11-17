@@ -48,6 +48,14 @@ def page(nodes, variables, total_key):
     }
 
 
+def save(path, data):
+    """Replace the fixture in one step. The app runs gh calls in parallel, and a call that read a file another one
+    was still writing would fail on half its JSON."""
+    temp = path.with_name(f"{path.name}.{os.getpid()}.tmp")
+    temp.write_text(json.dumps(data))
+    os.replace(temp, path)
+
+
 def answer(value):
     print(json.dumps(value))
     return 0
@@ -66,8 +74,10 @@ def fake_gh(args):
 
     def head(key):
         heads = data["prs"][key]["heads"]
-        value = heads.pop(0) if len(heads) > 1 else heads[0]
-        path.write_text(json.dumps(data))
+        if len(heads) == 1:
+            return heads[0]
+        value = heads.pop(0)
+        save(path, data)
         return value
 
     def refuse(what):
@@ -161,7 +171,7 @@ def fake_gh(args):
         polls = data.setdefault("async_polls", [])
         merged = {"status": "merged", "details": {"message": "merged"}}
         result = polls.pop(0) if len(polls) > 1 else (polls[0] if polls else merged)
-        path.write_text(json.dumps(data))
+        save(path, data)
         return answer(result)
     if len(args) == 2 and args[0] == "api" and "/compare/" in args[1]:
         return answer({"behind_by": 3, "ahead_by": 1})

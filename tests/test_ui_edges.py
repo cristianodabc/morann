@@ -2,7 +2,9 @@
 # SPDX-License-Identifier: Apache-2.0
 """No colored bar runs down the left edge of a pane, a field or a list: a focused pane, the details panel, the inline
 editor, the summary field and the submit bar show focus by their border color, tab underline and cursor row. Also the
-header's buttons at every width, and opening a check from the Checks tab."""
+header's buttons at every width, opening a check from the Checks tab, and a read that returns after the app quit."""
+
+import asyncio
 
 import pytest
 
@@ -146,3 +148,14 @@ async def test_a_check_opens_from_the_checks_tab():
             await pilot.press("1")  # elsewhere enter folds and o opens the line or the pull request, as before
             await settle(pilot)
             assert not main.check_action("open_check", ())
+
+
+async def test_a_read_that_returns_after_quitting_is_dropped():
+    """A worker still reading when the app quits hands its result over while the screen's widgets are being removed:
+    the app drops it rather than fail on a widget that is gone."""
+    with FakeGitHub(fixture()) as github:
+        tui = make_app(github)
+        async with tui.run_test(size=(100, 40)) as pilot:
+            await settle(pilot)
+            main = tui.main
+        assert await asyncio.to_thread(tui.call_from_thread, main.show_bars) is None

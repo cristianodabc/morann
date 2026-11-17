@@ -594,6 +594,10 @@ class Main(
         widget = event.widget
         if widget.id == "bar-text" and self.submitting and not self.editing:  # a click in the summary field
             self.action_bar_summary()
+        if widget is not self.focused:
+            # Each widget posts this through its own parents' queues, so two focus moves in a row can arrive out of
+            # order; one that has already lost focus must not set the pane that refocus gives focus back to.
+            return
         if widget.id in ("list", "filter") and self.focus_pane == "diff" and self.query_one("#diff").loading:
             return  # the loading diff pushed focus away; it comes back when the pull request arrives (refocus)
         if widget.id in ("list", "filter"):
@@ -731,3 +735,13 @@ class Morann(App[None]):
         self.theme = self.start_theme
         self.painter = Painter(self)
         self.push_screen(self.main)
+
+    def call_from_thread(self, callback, *args, **kwargs):
+        """Hand a worker's result to the UI, or drop it once the app has stopped running. A read still in flight when
+        the app quits returns while the screen's widgets are being removed, and showing it would fail on a widget
+        that is gone."""
+
+        def deliver():
+            return callback(*args, **kwargs) if self.is_running else None
+
+        return super().call_from_thread(deliver)

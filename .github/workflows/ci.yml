@@ -60,8 +60,9 @@ jobs:
           cache-dependency-path: requirements*.txt
       - name: Build .venv from the two locks
         run: make setup
-      - name: Run the tests with the coverage gate
-        run: make test
+      - name: Run the tests with the coverage gate, on every core
+        # The UI tests spend most of their time waiting for the app to go idle after each key, not on the CPU.
+        run: make test PYTEST_ARGS="-n auto"
       - name: Keep the coverage report
         if: ${{ always() && matrix.os == 'ubuntu-latest' && matrix.python == '3.13' }}
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
