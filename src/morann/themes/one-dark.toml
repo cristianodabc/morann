@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2026 Cristiano Carvalho
+# SPDX-License-Identifier: Apache-2.0
+# One Dark, from Atom, https://github.com/atom/atom/tree/master/packages/one-dark-syntax
+name = "One Dark"
+dark = true
+
+[colors]
+background = "#282c34"
+surface = "#21252b"
+panel = "#2c313a"
+border = "#3e4451"
+text = "#abb2bf"
+muted = "#7f848e"
+subtle = "#5c6370"
+accent = "#61afef"    # blue
+ok = "#98c379"        # green
+bad = "#e06c75"       # red
+warn = "#e5c07b"      # yellow
+info = "#56b6c2"      # cyan
+merged = "#c678dd"    # magenta
+local = "#d19a66"     # orange
+selection = "#3e4451"

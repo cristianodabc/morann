@@ -1,0 +1,37 @@
+# SPDX-FileCopyrightText: 2026 Cristiano Carvalho
+# SPDX-License-Identifier: Apache-2.0
+# The quick checks before each commit. Every hook is a make target, so it runs the tools `make setup` installed, at
+# the versions the locks pin, and nothing is fetched from another repository. Turn it on with: pre-commit install
+# The tests take a few minutes and are left to `make check` and to CI.
+repos:
+  - repo: local
+    hooks:
+      - id: lint
+        name: ruff (lint and format)
+        entry: make lint
+        language: system
+        pass_filenames: false
+        types: [python]
+      - id: types
+        name: mypy
+        entry: make types
+        language: system
+        pass_filenames: false
+        types: [python]
+      - id: shell
+        name: ShellCheck and shfmt
+        entry: make shell
+        language: system
+        pass_filenames: false
+        files: ^(bin/|install\.sh$)
+      - id: workflows
+        name: actionlint
+        entry: make workflows
+        language: system
+        pass_filenames: false
+        files: ^\.github/workflows/
+      - id: secrets
+        name: gitleaks (staged changes)
+        entry: make staged-secrets
+        language: system
+        pass_filenames: false

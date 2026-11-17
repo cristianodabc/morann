@@ -1,0 +1,173 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "morann"
+dynamic = ["version"]
+description = "Review pull requests in the terminal, from any folder."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE"]
+authors = [{ name = "Morann contributors" }]
+keywords = ["code review", "pull request", "github", "terminal", "tui", "textual"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Operating System :: MacOS",
+  "Operating System :: POSIX :: Linux",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Software Development :: Version Control :: Git",
+  "Typing :: Typed",
+]
+# The versions the installer pins are in requirements.txt; these are the oldest ones Morann is tested with.
+dependencies = [
+  "pygments>=2.21",
+  "rich>=15.0",
+  "textual>=8.2.8,<9",
+]
+
+[project.scripts]
+mor = "morann.cli:main"
+
+# The tools the checks run with. requirements-dev.txt pins them exactly with hashes; its header has the command.
+[dependency-groups]
+dev = [
+  "bandit",
+  "build",
+  "mypy",
+  "pip-audit",
+  "pytest",
+  "pytest-cov",
+  "pytest-xdist",
+  "ruff",
+]
+
+[project.urls]
+Homepage = "https://github.com/cristianodabc/morann"
+Repository = "https://github.com/cristianodabc/morann"
+Issues = "https://github.com/cristianodabc/morann/issues"
+Changelog = "https://github.com/cristianodabc/morann/blob/main/CHANGELOG.md"
+
+[tool.hatch.version]
+path = "src/morann/__init__.py"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/morann"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/src",
+  "/tests",
+  "/bin",
+  "/docs",
+  "/install.sh",
+  "/Makefile",
+  "/requirements.txt",
+  "/requirements-dev.txt",
+  "/CHANGELOG.md",
+  "/CONTRIBUTING.md",
+  "/SECURITY.md",
+]
+
+[tool.ruff]
+line-length = 120
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = [
+  "E501", # the formatter wraps code; a long comment or string stays on its line
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["morann"]
+
+[tool.bandit]
+# B404, B603, B607: Morann's job is to run the forge CLI and the system's link opener. Both are argument lists, never
+# a shell, and both are found on PATH by design. B105 reads the check state "pass" as a password; gitleaks is what
+# scans for secrets.
+skips = ["B105", "B404", "B603", "B607"]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+testpaths = ["tests"]
+pythonpath = ["src", "tests"]
+addopts = ["-ra", "--strict-markers", "--strict-config"]
+xfail_strict = true
+filterwarnings = ["error"]
+faulthandler_timeout = 120 # a test still running after two minutes prints every thread's stack, so a hang shows where
+
+[tool.coverage.run]
+source = ["morann"]
+branch = true
+omit = ["*/morann/__main__.py"] # the launcher runs it in its own process; tests/test_command.py covers it there
+
+[tool.coverage.report]
+fail_under = 90
+show_missing = true
+skip_covered = true
+exclude_also = ["if TYPE_CHECKING:"]
+
+[tool.mypy]
+python_version = "3.11"
+files = ["src/morann"]
+strict = true
+warn_unreachable = true
+# The modules below are called from typed code before they are annotated themselves.
+untyped_calls_exclude = [
+  "morann.app",
+  "morann.main_attention",
+  "morann.main_diff",
+  "morann.main_lists",
+  "morann.main_motions",
+  "morann.main_posts",
+  "morann.main_nav",
+  "morann.main_review",
+  "morann.main_select",
+  "morann.main_single",
+  "morann.main_submit",
+  "morann.vimkeys",
+  "morann.widgets",
+]
+
+[[tool.mypy.overrides]]
+# The Textual screen is one class built from mixins that share state through self. Until that state has a typed
+# home, these modules are checked only where a function is annotated, and a mixin may read what the composed screen
+# defines.
+module = [
+  "morann.app",
+  "morann.main_attention",
+  "morann.main_diff",
+  "morann.main_lists",
+  "morann.main_motions",
+  "morann.main_posts",
+  "morann.main_nav",
+  "morann.main_review",
+  "morann.main_select",
+  "morann.main_single",
+  "morann.main_submit",
+  "morann.vimkeys",
+  "morann.widgets",
+]
+disallow_untyped_defs = false
+disallow_incomplete_defs = false
+disallow_untyped_calls = false
+check_untyped_defs = false
+disable_error_code = ["attr-defined"]
+
+[[tool.mypy.overrides]]
+# core names what the UI uses from the other modules, so the UI keeps saying core.X.
+module = ["morann.core"]
+implicit_reexport = true
+
+[[tool.mypy.overrides]]
+module = ["pygments.*"]
+ignore_missing_imports = true

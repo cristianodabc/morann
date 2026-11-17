@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: 2026 Cristiano Carvalho
+# SPDX-License-Identifier: Apache-2.0
+# Catppuccin Latte, https://catppuccin.com/palette
+name = "Catppuccin Latte"
+dark = false
+
+[colors]
+background = "#eff1f5" # base
+surface = "#e6e9ef"    # mantle
+panel = "#ccd0da"      # surface0
+border = "#bcc0cc"     # surface1
+text = "#4c4f69"       # text
+muted = "#6c6f85"      # subtext0
+subtle = "#9ca0b0"     # overlay0
+accent = "#1e66f5"     # blue
+ok = "#40a02b"         # green
+bad = "#d20f39"        # red
+warn = "#df8e1d"       # yellow
+info = "#209fb5"       # sapphire
+merged = "#8839ef"     # mauve
+local = "#ea76cb"      # pink

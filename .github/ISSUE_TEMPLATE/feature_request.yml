@@ -1,0 +1,25 @@
+name: Feature request
+description: Something Morann should do
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What you are trying to do and where Morann gets in the way today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like
+      description: How it would work from the keyboard. Name the key, the pane and what is shown.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: What you do instead
+      description: The workaround you use now, or other tools that do this.
+    validations:
+      required: false

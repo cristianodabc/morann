@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2026 Cristiano Carvalho
+# SPDX-License-Identifier: Apache-2.0
+# GitHub dark, the colors of github.com's dark mode
+name = "GitHub Dark"
+dark = true
+
+[colors]
+background = "#0d1117"
+surface = "#161b22"
+panel = "#21262d"
+border = "#30363d"
+text = "#e6edf3"
+muted = "#9198a1"
+subtle = "#6e7681"
+accent = "#2f81f7"
+ok = "#3fb950"
+bad = "#f85149"
+warn = "#d29922"
+info = "#58a6ff"
+merged = "#a371f7"
+local = "#db61a2"
+selection = "#1c2d45"

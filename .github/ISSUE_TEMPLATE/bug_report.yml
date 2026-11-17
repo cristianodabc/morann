@@ -1,0 +1,51 @@
+name: Bug report
+description: Something Morann does wrong
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A security problem does not belong here: report it privately through the Security tab ("Report a vulnerability").
+        Leave out tokens, private repository names and anything else you would not post in public.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected and what you saw instead. Paste the exact message when there is one.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: The command you ran and the keys you pressed, in order.
+      placeholder: |
+        1. mor --owner my-org
+        2. Press 2, then enter
+        3. ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Morann version or commit
+      placeholder: 0.1.0, or the output of git rev-parse --short HEAD
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: System
+      description: Operating system, terminal, Python version (python3 --version) and forge CLI version (gh --version).
+      placeholder: Linux, kitty 0.42, Python 3.12.7, gh 2.80.0
+    validations:
+      required: true
+  - type: dropdown
+    id: forge
+    attributes:
+      label: Forge
+      options:
+        - GitHub
+        - Other
+    validations:
+      required: true

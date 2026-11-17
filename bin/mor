@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# SPDX-FileCopyrightText: 2026 Cristiano Carvalho
+# SPDX-License-Identifier: Apache-2.0
+# mor: Morann, a terminal pull request reviewer. install.sh links this into ~/.local/bin and builds the Python
+# environment it runs in. `mor --help` has the usage.
+#
+# MORANN_PYTHON names the Python to run with; otherwise it is the one install.sh built in $MORANN_DATA_DIR/venv
+# (MORANN_DATA_DIR defaults to ${XDG_DATA_HOME:-~/.local/share}/morann).
+set -euo pipefail
+source_path="${BASH_SOURCE[0]}"
+[[ -L "$source_path" ]] && source_path="$(readlink "$source_path")"
+root="$(cd -- "$(dirname -- "$source_path")/.." && pwd)"
+data="${MORANN_DATA_DIR:-${XDG_DATA_HOME:-$HOME/.local/share}/morann}"
+python="${MORANN_PYTHON:-$data/venv/bin/python}"
+if [[ ! -x "$python" ]]; then
+  printf 'mor: its Python environment is missing (%s); run: %s/install.sh\n' "$python" "$root" >&2
+  exit 1
+fi
+exec "$python" -I -B "$root/src/morann/__main__.py" "$@"

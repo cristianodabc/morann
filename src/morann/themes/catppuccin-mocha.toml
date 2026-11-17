@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: 2026 Cristiano Carvalho
+# SPDX-License-Identifier: Apache-2.0
+# Catppuccin Mocha, https://catppuccin.com/palette
+name = "Catppuccin Mocha"
+dark = true
+
+[colors]
+background = "#1e1e2e" # base
+surface = "#181825"    # mantle
+panel = "#313244"      # surface0
+border = "#45475a"     # surface1
+text = "#cdd6f4"       # text
+muted = "#a6adc8"      # subtext0
+subtle = "#6c7086"     # overlay0
+accent = "#89b4fa"     # blue
+ok = "#a6e3a1"         # green
+bad = "#f38ba8"        # red
+warn = "#f9e2af"       # yellow
+info = "#74c7ec"       # sapphire
+merged = "#cba6f7"     # mauve
+local = "#f5c2e7"      # pink

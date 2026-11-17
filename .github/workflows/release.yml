@@ -1,0 +1,61 @@
+# SPDX-FileCopyrightText: 2026 Cristiano Carvalho
+# SPDX-License-Identifier: Apache-2.0
+# Builds what a release is made of: the sdist, the wheel, a CycloneDX SBOM of the pinned dependencies and their
+# SHA-256 sums. It publishes nothing. Publishing to a package index or attaching files to a GitHub release is a step
+# to add here once that is decided, with its own narrow permission.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build the release files
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      PIP_DISABLE_PIP_VERSION_CHECK: "1"
+      PIP_NO_INPUT: "1"
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
+        with:
+          python-version: "3.13"
+      - name: Build .venv from the two locks
+        run: make setup
+      - name: Check that the tag is the package version
+        if: ${{ github.ref_type == 'tag' }}
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          version="$(PYTHONPATH=src python -c 'import morann; print(morann.__version__)')"
+          if [ "v$version" != "$TAG" ]; then
+            echo "the tag $TAG does not match the package version $version" >&2
+            exit 1
+          fi
+      - name: Run the tests
+        run: make test
+      - name: Build the sdist and the wheel, install the wheel and run mor --help
+        run: make build
+      - name: Write the SBOM of the pinned dependencies
+        run: make sbom
+      - name: Write the SHA-256 sums
+        working-directory: dist
+        run: sha256sum -- * >SHA256SUMS
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release
+          path: dist/
+          if-no-files-found: error
+          retention-days: 30

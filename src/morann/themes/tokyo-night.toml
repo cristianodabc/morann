@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2026 Cristiano Carvalho
+# SPDX-License-Identifier: Apache-2.0
+# Tokyo Night (night), https://github.com/folke/tokyonight.nvim
+name = "Tokyo Night"
+dark = true
+
+[colors]
+background = "#1a1b26" # bg
+surface = "#16161e"    # bg_dark
+panel = "#292e42"      # bg_highlight
+border = "#414868"     # terminal_black
+text = "#c0caf5"       # fg
+muted = "#a9b1d6"      # fg_dark
+subtle = "#565f89"     # comment
+accent = "#7aa2f7"     # blue
+ok = "#9ece6a"         # green
+bad = "#f7768e"        # red
+warn = "#e0af68"       # yellow
+info = "#7dcfff"       # cyan
+merged = "#bb9af7"     # magenta
+local = "#ff9e64"      # orange
+selection = "#283457"  # visual selection

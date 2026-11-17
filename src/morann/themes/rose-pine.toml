@@ -1,0 +1,21 @@
+# SPDX-FileCopyrightText: 2026 Cristiano Carvalho
+# SPDX-License-Identifier: Apache-2.0
+# Rosé Pine, https://rosepinetheme.com/palette
+name = "Rosé Pine"
+dark = true
+
+[colors]
+background = "#191724" # base
+surface = "#1f1d2e"    # surface
+panel = "#26233a"      # overlay
+border = "#403d52"     # highlight med
+text = "#e0def4"       # text
+muted = "#908caa"      # subtle
+subtle = "#6e6a86"     # muted
+accent = "#c4a7e7"     # iris
+ok = "#9ccfd8"         # foam
+bad = "#eb6f92"        # love
+warn = "#f6c177"       # gold
+info = "#31748f"       # pine
+merged = "#c4a7e7"     # iris
+local = "#ebbcba"      # rose

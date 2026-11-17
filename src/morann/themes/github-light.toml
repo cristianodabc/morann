@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: 2026 Cristiano Carvalho
+# SPDX-License-Identifier: Apache-2.0
+# GitHub light, the colors of github.com's light mode
+name = "GitHub Light"
+dark = false
+
+[colors]
+background = "#ffffff"
+surface = "#f6f8fa"
+panel = "#eaeef2"
+border = "#d0d7de"
+text = "#1f2328"
+muted = "#59636e"
+subtle = "#8c959f"
+accent = "#0969da"
+ok = "#1a7f37"
+bad = "#cf222e"
+warn = "#9a6700"
+info = "#0969da"
+merged = "#8250df"
+local = "#bf3989"
+selection = "#ddf4ff"
