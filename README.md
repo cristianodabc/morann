@@ -156,9 +156,10 @@ Choose and order the segments in the config file:
 ```
 statusline_left = mode, where, branch, tab, progress, checks, merge
 statusline_right = position, theme, help
-``` Each tab
-shows its key on the left, dimmed, and its count on the right as a badge: red for failing checks or requested
-changes, the accent for what needs you.
+```
+
+Each tab shows its key on the left, dimmed, and its count on the right as a badge: red for failing checks or
+requested changes, the accent for what needs you.
 
 ### Getting around
 

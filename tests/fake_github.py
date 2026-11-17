@@ -12,7 +12,7 @@ import tempfile
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from fake_gh import HEAD
+from fake_gh import HEAD, save
 from morann import core
 from morann.github import GitHubProvider
 
@@ -353,7 +353,7 @@ class FakeGitHub:
         self.saved = {}
 
     def write(self, data):
-        self.fixture.write_text(json.dumps(data))
+        save(self.fixture, data)  # in one step: the app may be reading it in a worker
 
     def data(self):
         return json.loads(self.fixture.read_text())
