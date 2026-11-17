@@ -735,3 +735,13 @@ class Morann(App[None]):
         self.theme = self.start_theme
         self.painter = Painter(self)
         self.push_screen(self.main)
+
+    def call_from_thread(self, callback, *args, **kwargs):
+        """Hand a worker's result to the UI, or drop it once the app has stopped running. A read still in flight when
+        the app quits returns while the screen's widgets are being removed, and showing it would fail on a widget
+        that is gone."""
+
+        def deliver():
+            return callback(*args, **kwargs) if self.is_running else None
+
+        return super().call_from_thread(deliver)
