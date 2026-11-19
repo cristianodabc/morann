@@ -168,9 +168,10 @@ requested changes, the accent for what needs you.
 | `:` | The command line; `tab` completes, up and down walk the history. See [Commands](#commands). |
 | `ctrl+p` | Jump by a few letters to any pull request on hand, a file of the open one, or a command (fuzzy). |
 | `ctrl+o` `ctrl+i` | Back to where you were and forward again, across panes and pull requests; `O` also goes forward, since most terminals send `tab` for `ctrl+i`. |
-| `tab`, `ctrl+w` `j` `k` `w` | The other pane; the pull request pane, the list, the other one. `ctrl+w` `h` `l` move between the file tree and the diff. |
+| `tab`, `ctrl+w` `j` `k` `w` | The other pane; the pull request pane, the list, the other one. `ctrl+w` `b` `t` are the bottom and top pane like `j` `k`, `ctrl+w` `p` and `ctrl+w` `ctrl+w` the other one. `ctrl+w` `h` `l` (or `ctrl+h` `ctrl+l` after it) move between the file tree and the diff. |
 | `j` `k`, `gg` `G`, `H` `L` | Move; the top and bottom; the top and bottom of the view. A count repeats a motion (`5j`, `5G`). |
-| `ctrl+d` `ctrl+u`, `ctrl+f` `ctrl+b`, `zt` `zz` `zb` | Half and whole pages; scroll the cursor row to the top, middle or bottom. |
+| `ctrl+d` `ctrl+u`, `ctrl+f` `ctrl+b`, `ctrl+e` `ctrl+y`, `zt` `zz` `zb` | Half and whole pages; scroll a line down or up, the cursor staying on its row until the row leaves the view; scroll the cursor row to the top, middle or bottom (`z.` is `zz`). |
+| `{` `}` | In the list, the previous and next repository, or the first and last row where there is none. In the diff they are the previous and next file. |
 | `gt` `gT`, `[` `]` | The next and previous tab of the focused pane. |
 | `]c` `[c`, `]h`, `]f`, `]t`, `]u`, `]m`, `]d` | The next and previous change, hunk, file, thread, unresolved thread, comment or draft of yours, into the next file where this one has no more (`3]c` repeats). A quick letter after `[` or `]` makes the motion instead of the tab step. |
 | `/`, `n` `N` | Filter the list or search the pull request pane; the next and previous match. |
@@ -194,7 +195,7 @@ A submitted review's summary and a description can be edited, not deleted. An ed
 
 | Where | Keys |
 | --- | --- |
-| Anywhere | `v` starts a review, then shows what it would post. `C` comments on the conversation. `M` opens the actions. `z` `+` `-` size the pull request pane. `ctrl+r` refreshes. `T` tries the next color theme. `q` quits. |
+| Anywhere | `v` starts a review, then shows what it would post. `C` comments on the conversation. `M` opens the actions. `z` `+` `-` size the pull request pane. `ctrl+r` refreshes, and `r` does in the list; the header names the one that works, beside the scope and the time since the last refresh. `T` tries the next color theme. `q` quits. |
 | List | `1` `2` `3` `4` choose Mine, Pending (your reviews in progress, here or on GitHub, the longest waiting first), To Review or All. `enter` opens the pull request below (from Pending, at its first draft). `o` opens it in GitHub. `s` chooses the scope. `m` shows only yours. `g` groups by repository. `U` updates your pull requests behind their base. `!` `b` `d` show only failing, behind or draft pull requests. |
 | Pull request | `1` `2` `3` `4` choose Conversation, Commits, Checks or Files. `{` `}` go to the previous and next file. `n` `p` go to the next and previous thread. `u` shows only unresolved threads. `gx` opens a link of the comment under the cursor, after showing its address; `gy` copies one. |
 | Diff | `c` comments on the line. `R` replies. `x` marks a thread to resolve. `e` edits the draft, or your own posted comment, review summary or description, under the cursor (elsewhere on the Files tab it shows the file tree). `d` `d` deletes a draft, or your own posted comment after a confirmation. `a` approves. `r` requests changes. `m` writes the summary. `f` focuses the file tree. `V` marks the file viewed. `enter` on "N unchanged lines" shows them. <code>&#124;</code> shows old and new side by side, where the diff has 120 columns. |
@@ -218,9 +219,11 @@ The list flags what needs you, with these glyphs in `--icons unicode` (the ASCII
 last opened it `●` (`o`).
 
 A few vim keys already had a meaning here and keep it: in the list `g` groups, so `gg` is two quick presses; `z`
-maximizes the pull request pane, and a quick `t`, `z` or `b` after it scrolls instead; `M` opens the actions; `m` is
-"mine only" in the list and the summary in the diff, so there are no marks; `n` in the pull request pane is the next
-thread until a search is active. A count starts with 5 to 9, because 1 to 4 choose tabs.
+maximizes the pull request pane, and a quick `t`, `z`, `.` or `b` after it scrolls instead; `M` opens the actions, so
+there is no `M` for the middle of the view; `m` is "mine only" in the list and the summary in the diff, so there are no
+marks; `n` in the pull request pane is the next thread until a search is active. A count starts with 5 to 9, because 1
+to 4 choose tabs. A row has no cursor column, so there are no word or line motions (`w`, `b`, `0`, `$`) and no `*`;
+`?` is the help, so `/` and `n` `N` are the only search.
 
 ### Commands
 

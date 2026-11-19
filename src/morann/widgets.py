@@ -102,6 +102,8 @@ class Rows(ScrollView, can_focus=True):
         Binding("ctrl+u,pageup", "page(-1)", show=False),
         Binding("ctrl+f", "page(1, True)", show=False),
         Binding("ctrl+b", "page(-1, True)", show=False),
+        Binding("ctrl+e", "scroll_lines(1)", show=False),
+        Binding("ctrl+y", "scroll_lines(-1)", show=False),
         Binding("home", "edge(-1)", show=False),
         Binding("G,end", "edge(1)", show=False),
         Binding("H", "view('top')", show=False),
@@ -251,6 +253,20 @@ class Rows(ScrollView, can_focus=True):
         row = self.visual[target][0]
         self.go(row if row >= 0 else self.cursor + step, step)
 
+    def action_scroll_lines(self, step):
+        """ctrl+e and ctrl+y: scroll the view a line down or up. The cursor stays on its row while any of it is in view;
+        past that it moves to the nearest row that is wholly in view, as vim keeps the cursor on screen."""
+        if not self.starts:
+            return
+        height = max(1, self.size.height)
+        top = min(max(0, self.scroll_offset.y + step), max(0, len(self.visual) - height))
+        self.scroll_to(y=top, animate=False, immediate=True)
+        first, last = self.span(self.cursor)
+        if last < top:  # off the top: the first row that starts in the view
+            self.go(next((i for i, start in enumerate(self.starts) if start >= top), len(self.rows) - 1), 1)
+        elif first >= top + height:  # off the bottom: the last row that ends in the view
+            self.go(max((i for i in range(len(self.rows)) if self.span(i)[1] < top + height), default=0), -1)
+
     def jumped(self):
         if self.before_jump:
             self.before_jump()
@@ -338,6 +354,8 @@ class ListRows(Rows):
         Binding("d", "screen.attention('draft')", show=False),
         Binding("n", "screen.match(1)", show=False),
         Binding("N", "screen.match(-1)", show=False),
+        Binding("left_curly_bracket", "screen.group_step(-1)", show=False),
+        Binding("right_curly_bracket", "screen.group_step(1)", show=False),
     ]
 
 
@@ -404,6 +422,8 @@ class VimTree(Tree[int]):
         Binding("ctrl+u,pageup", "tree_page(-1)", show=False),
         Binding("ctrl+f", "tree_page(1, True)", show=False),
         Binding("ctrl+b", "tree_page(-1, True)", show=False),
+        Binding("ctrl+e", "tree_scroll(1)", show=False),
+        Binding("ctrl+y", "tree_scroll(-1)", show=False),
         Binding("home", "tree_edge(-1)", show=False),
         Binding("G,end", "tree_edge(1)", show=False),
         Binding("H", "tree_view('top')", show=False),
@@ -417,6 +437,13 @@ class VimTree(Tree[int]):
     def action_tree_page(self, step, whole=False):
         height = max(1, self.scrollable_content_region.height)
         self.go_line(max(0, self.cursor_line) + step * max(1, height if whole else height // 2))
+
+    def action_tree_scroll(self, step):
+        """ctrl+e and ctrl+y: scroll the view a line; the cursor moves only when it would leave the view."""
+        height = max(1, self.scrollable_content_region.height)
+        top = min(max(0, self.scroll_offset.y + step), max(0, self.last_line + 1 - height))
+        self.scroll_to(y=top, animate=False, immediate=True)
+        self.go_line(min(max(self.cursor_line, top), top + height - 1))
 
     def action_tree_edge(self, step):
         self.go_line(self.last_line if step > 0 else 0)

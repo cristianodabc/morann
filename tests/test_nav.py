@@ -226,6 +226,33 @@ async def test_window_keys_and_tab_steps():
             assert main.tab == "pending"  # All, To Review, Pending
 
 
+async def test_more_window_keys():
+    """ctrl+w t and b are the top and bottom window (the list, the pull request), p the previous one, ctrl+w ctrl+w the
+    other, and ctrl+w ctrl+h and ctrl+l the file tree and the diff, as vim has them."""
+    with FakeGitHub(fixture()) as github:
+        tui = make_app(github)
+        async with tui.run_test(size=(100, 40)) as pilot:
+            await settle(pilot)
+            main = tui.main
+            await pilot.press("ctrl+w", "b")
+            assert main.focus_pane == "diff" and tui.focused is main.query_one("#diff")
+            await pilot.press("ctrl+w", "t")
+            assert main.focus_pane == "list" and tui.focused is main.query_one("#list")
+            await pilot.press("ctrl+w", "p")
+            assert main.focus_pane == "diff"
+            await pilot.press("ctrl+w", "ctrl+w")
+            assert main.focus_pane == "list"
+            await pilot.press("ctrl+w", "ctrl+w")
+            assert main.focus_pane == "diff"
+            await pilot.press("4")
+            await settle(pilot)
+            await pilot.press("ctrl+w", "ctrl+h")
+            await settle(pilot)
+            assert tui.focused is main.files_tree()
+            await pilot.press("ctrl+w", "ctrl+l")
+            assert tui.focused is main.query_one("#diff")
+
+
 async def test_help_filters_by_key_or_words():
     with FakeGitHub(fixture()) as github:
         tui = make_app(github)

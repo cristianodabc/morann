@@ -1,8 +1,8 @@
 # SPDX-FileCopyrightText: 2026 Cristiano Carvalho
 # SPDX-License-Identifier: Apache-2.0
-"""The vim-style keys that need memory: counts (5j), the g, z and ctrl+w prefixes (gg, gt, gT, zt, zz, zb, ctrl+w j),
+"""The vim-style keys that need memory: counts (5j), the g, z and ctrl+w prefixes (gg, gt, gT, zt, zz, z., zb, ctrl+w j),
 / search in the lower pane with n and N, and the jump list ctrl+o and ctrl+i walk. Mixed into Main; the plain motions
-(G, H, L, ctrl+d, ctrl+u, ctrl+f, ctrl+b) are bindings of the row widgets.
+(G, H, L, ctrl+d, ctrl+u, ctrl+f, ctrl+b, ctrl+e, ctrl+y, and { } in the list) are bindings of the row widgets.
 
 Where a vim key is already a Morann key, the Morann key stays: g in the list groups by repository, z maximizes the lower
 pane, M opens the actions, n in the lower pane is the next thread unless a search is active, and m is the summary or the
@@ -23,8 +23,22 @@ LIST_TABS = tuple(core.LIST_TABS)
 CHORD_WINDOW = 0.6  # seconds a g or a z waits for its second key
 COUNT_DIGITS = 3  # a count of more than 999 is never what was meant
 JUMP_LIMIT = 100  # places a jump list keeps
-PLACES = {"t": "top", "z": "middle", "b": "bottom"}  # zt zz zb
-WINDOWS = {"j": "diff", "down": "diff", "k": "list", "up": "list", "w": "other", "h": "tree", "l": "code"}  # ctrl+w
+PLACES = {"t": "top", "z": "middle", "full_stop": "middle", "b": "bottom"}  # zt zz z. zb
+WINDOWS = {  # ctrl+w and a key: the list is the top window and the pull request pane the bottom one
+    "j": "diff",
+    "down": "diff",
+    "b": "diff",
+    "k": "list",
+    "up": "list",
+    "t": "list",
+    "w": "other",
+    "ctrl+w": "other",
+    "p": "other",  # the previous window: with two, the other one
+    "h": "tree",
+    "ctrl+h": "tree",
+    "l": "code",
+    "ctrl+l": "code",
+}
 BRACKETS = {"right_square_bracket": 1, "left_square_bracket": -1}  # ] and [ then a letter: main_motions.MOTIONS
 SECOND = {  # what may follow each prefix
     "g": ("g", "t", "T", "x", "y"),
@@ -41,6 +55,8 @@ REPEATED = {
     "ctrl+u",
     "ctrl+f",
     "ctrl+b",
+    "ctrl+e",
+    "ctrl+y",
     "pagedown",
     "pageup",
     "n",

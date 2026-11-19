@@ -40,12 +40,18 @@ SECTIONS = (
             Key("j k", "move down, up (also the arrow keys)", "move", BOTH + ("tree",)),
             Key("ctrl+d ctrl+u", "half a page down, up", "", BOTH + ("tree",)),
             Key("ctrl+f ctrl+b", "a whole page down, up", "", BOTH + ("tree",)),
+            Key(
+                "ctrl+e ctrl+y",
+                "scroll a line down, up; the cursor stays on its row until the row leaves the view",
+                "",
+                BOTH + ("tree",),
+            ),
             Key("gg G", "the top, the bottom; 5G or 5gg is the fifth row", "", BOTH + ("tree",)),
             Key("H L", "the top, the bottom of the view; 3H is its third row", "", BOTH + ("tree",)),
-            Key("zt zz zb", "scroll so the cursor row is at the top, middle, bottom", "", BOTH + ("tree",)),
+            Key("zt zz zb", "scroll so the cursor row is at the top, middle, bottom (z. is zz)", "", BOTH + ("tree",)),
             Key("5j", "a count repeats a motion; it starts at 5, since 1 to 4 switch tabs"),
             Key("tab", "the other pane: the list, or the pull request below it", "pane", BOTH),
-            Key("ctrl+w j k", "the pull request pane, the list (ctrl+w w: the other one)"),
+            Key("ctrl+w j k", "the pull request pane, the list (b and t do the same; w, p, ctrl+w: the other one)"),
             Key("ctrl+w h l", "the file tree, the diff (ctrl+h and ctrl+l also work)", "", ("files", "tree")),
             Key("z", "maximize the pull request pane, or bring the list back"),
             Key("+ -", "grow, shrink the pull request pane"),
@@ -69,6 +75,9 @@ SECTIONS = (
         (
             Key("1 2 3 4", "Mine, Pending (your reviews in progress), To Review (waiting on you), All", "", ("list",)),
             Key("gt gT", "the next, previous tab of the focused pane", "", BOTH),
+            Key(
+                "{ }", "the previous, next repository of the grouped list; the first, last row with none", "", ("list",)
+            ),
             Key("enter", "open the pull request below", "open", ("list",), "open_diff"),
             Key("o", "open it in {forge}", "", ("list",)),
             Key("s", "scope: Mine, Personal (read only), or one organization", "scope", ("list",)),

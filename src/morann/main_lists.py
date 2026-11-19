@@ -579,6 +579,15 @@ class ListsMixin:
         self.columns = (None, None)
         self.show_list()
 
+    def action_group_step(self, step):
+        """{ and }: the previous and next repository header of the grouped list, as vim moves between paragraphs; with
+        none left in that direction, the first or last row."""
+        rows = self.query_one("#list", ListRows)
+        span = range(rows.cursor + 1, len(rows.rows)) if step > 0 else range(rows.cursor - 1, -1, -1)
+        found = next((index for index in span if isinstance(rows.rows[index], core.GroupRow)), None)
+        rows.jumped()
+        rows.go(found if found is not None else len(rows.rows) - 1 if step > 0 else 0, step)
+
     def action_group_fold(self, fold):
         row = self.query_one("#list", ListRows).current()
         if not isinstance(row, core.GroupRow) or row.collapsed == fold:

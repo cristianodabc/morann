@@ -237,8 +237,8 @@ class HelpScreen(Dialog[None]):
     BINDINGS: ClassVar[list[BindingType]] = [
         Binding("escape,q,question_mark", "close", show=False),
         Binding("slash", "filter", show=False),
-        Binding("j,down", "scroll(1)", show=False),
-        Binding("k,up", "scroll(-1)", show=False),
+        Binding("j,down,ctrl+e", "scroll(1)", show=False),
+        Binding("k,up,ctrl+y", "scroll(-1)", show=False),
         Binding("ctrl+d,pagedown", "page(0.5)", show=False),
         Binding("ctrl+u,pageup", "page(-0.5)", show=False),
         Binding("ctrl+f,space", "page(1)", show=False),

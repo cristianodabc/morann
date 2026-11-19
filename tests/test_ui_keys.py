@@ -2,10 +2,11 @@
 # SPDX-License-Identifier: Apache-2.0
 """The keyboard: every control the mouse reaches has a key, shown where there is room (the top bar's chips and scope
 key, the header's buttons), and the vim motions: counts, gg and G, H and L, ctrl+d ctrl+u ctrl+f ctrl+b, zt zz zb,
-search with / n N, ctrl+o and ctrl+i. The keys that were already there keep working."""
+search with / n N, ctrl+o and ctrl+i, ctrl+e and ctrl+y, z., and { } between the list's repositories. The keys that
+were already there keep working."""
 
 from fake_github import FakeGitHub, fixture, long_fixture
-from morann import core, vimkeys
+from morann import chrome, core, vimkeys
 from support import make_app, settle
 
 
@@ -430,6 +431,15 @@ async def test_tree_and_help():
             await pilot.press("g")
             await pilot.pause()
             assert body.scroll_y == 0
+            await pilot.press("ctrl+e", "ctrl+e")  # a line at a time, as j and k do
+            await pilot.pause()
+            assert body.scroll_y == 2
+            await pilot.press("ctrl+y")
+            await pilot.pause()
+            assert body.scroll_y == 1
+            await pilot.press("ctrl+y")
+            await pilot.pause()
+            assert body.scroll_y == 0
             await pilot.press("ctrl+f")
             await pilot.pause()
             assert body.scroll_y > 0
@@ -439,3 +449,165 @@ async def test_tree_and_help():
             await pilot.press("escape")
             await settle(pilot)
             assert tui.screen is main
+
+
+async def test_refresh_hint():
+    """The scope carries a muted hint naming what refreshes: r while the list has the keys, ctrl+r below it. It is the
+    key line's own cap and muted label, the key it names works, and it goes before the scope, the crumbs or the counts
+    would be cut."""
+    with FakeGitHub(fixture()) as github:
+
+        def reads():
+            return len([c for c in github.calls() if "search(" in c["stdin"]])
+
+        tui = make_app(github)
+        async with tui.run_test(size=(140, 40)) as pilot:
+            await settle(pilot)
+            main = tui.main
+            hint = main.query_one("#refreshkey")
+            assert hint.display and str(hint.content).split() == ["r", "refresh"], hint.content
+            assert hint.content == chrome.key_line([("r", "refresh")], tui.painter.ink)  # no color of its own
+            before = reads()
+            await pilot.press("r")  # the key it names refreshes
+            await settle(pilot)
+            assert reads() > before
+            await pilot.press("tab")  # the pull request pane: r is something else there, so the hint says ctrl+r
+            await settle(pilot)
+            assert hint.display and str(hint.content).split() == ["ctrl+r", "refresh"], hint.content
+            main.last_refresh = 0.0
+            before = reads()
+            await pilot.press("ctrl+r")
+            await settle(pilot)
+            assert reads() > before
+        shown = []
+        for width in (60, 70, 80, 100, 120, 140, 160):
+            narrow = make_app(github)
+            async with narrow.run_test(size=(width, 30)) as pilot:
+                await settle(pilot)
+                bar = narrow.main
+                scope, hint, info = (bar.query_one(f"#{name}") for name in ("scope", "refreshkey", "topinfo"))
+                assert scope.size.width >= len(str(scope.label)), (width, scope.label)  # the scope is never cut
+                if hint.display:  # nothing else is cut for it, and it ends inside the window
+                    assert hint.region.right <= width and hint.region.x >= scope.region.right, (width, hint.region)
+                    assert info.size.width >= core.width_of(str(info.content)), width
+                shown.append(hint.display)
+        assert shown[0] is False and shown[-1] is True and shown == sorted(shown), shown  # it goes as room does
+
+
+async def test_scroll_lines():
+    """ctrl+e and ctrl+y scroll the view a line (a count, more) and keep the cursor on its row until the row leaves the
+    view; then it takes the nearest row that is wholly in view. The file tree does the same."""
+    with FakeGitHub(long_fixture()) as github:
+        tui = make_app(github)
+        async with tui.run_test(size=(80, 24)) as pilot:
+            await settle(pilot)
+            main = tui.main
+            diff = main.query_one("#diff")
+            await pilot.press("tab")
+            await settle(pilot)
+            rows = diff.selectable_rows()
+            height = diff.size.height
+            await pilot.press("g", "g", "9", "9", "j")
+            assert diff.cursor == rows[99]
+            offset = diff.scroll_offset.y
+            await pilot.press("ctrl+e")
+            assert diff.scroll_offset.y == offset + 1 and diff.cursor == rows[99]  # the row is still in view
+            await pilot.press("ctrl+y")
+            assert diff.scroll_offset.y == offset and diff.cursor == rows[99]
+            await pilot.press("g", "g", "ctrl+f", "ctrl+f", "H")
+            cursor, offset = diff.cursor, diff.scroll_offset.y
+            await pilot.press("7", "ctrl+e")  # the cursor row scrolls off the top: the first row that starts in view
+            assert diff.scroll_offset.y == offset + 7
+            first = next(i for i in rows if diff.starts[i] >= diff.scroll_offset.y)
+            assert diff.cursor == first and diff.cursor > cursor
+            await pilot.press("7", "ctrl+y")
+            assert diff.scroll_offset.y == offset
+            await pilot.press("L", "8", "ctrl+y")  # off the bottom: the last row that ends in view
+            bottom = diff.scroll_offset.y + height
+            assert diff.scroll_offset.y == offset - 8
+            assert diff.cursor == max(i for i in rows if diff.span(i)[1] < bottom), (diff.cursor, bottom)
+            await pilot.press("G")
+            end = diff.scroll_offset.y
+            await pilot.press("ctrl+e")  # at the end there is nothing to scroll into
+            assert diff.scroll_offset.y == end and diff.cursor == rows[-1]
+            await pilot.press("g", "g", "9", "ctrl+y")
+            assert diff.scroll_offset.y == 0 and diff.cursor == rows[0]  # nor above the top
+            await pilot.press("tab")  # the list: its rows move with the same keys
+            listing = main.query_one("#list")
+            assert listing.scroll_offset.y == 0 and len(listing.visual) > listing.size.height
+            await pilot.press("ctrl+e")  # this window shows part of the list
+            assert listing.scroll_offset.y == 1 and listing.starts[listing.cursor] >= 1
+            await pilot.press("ctrl+y")
+            assert listing.scroll_offset.y == 0
+        short = make_app(github)
+        async with short.run_test(size=(100, 12)) as pilot:  # a window short enough to scroll the file tree
+            await settle(pilot)
+            await pilot.press("tab", "4", "f")
+            tree = short.main.files_tree()
+            height = tree.scrollable_content_region.height
+            assert short.focused is tree and tree.last_line + 1 > height
+            await pilot.press("g", "g")
+            assert tree.cursor_line == 0 and tree.scroll_offset.y == 0
+            await pilot.press("ctrl+e")  # the cursor line scrolls off the top: it follows
+            assert tree.scroll_offset.y == 1 and tree.cursor_line == 1
+            await pilot.press("5", "ctrl+e")
+            assert tree.scroll_offset.y == min(6, tree.last_line + 1 - height)
+            assert tree.cursor_line >= tree.scroll_offset.y
+            await pilot.press("G", "9", "ctrl+y")
+            assert tree.scroll_offset.y == 0 and tree.cursor_line == height - 1  # it stops at the bottom of the view
+            await pilot.press("ctrl+e", "ctrl+y")
+            assert tree.cursor_line == height - 1  # still in view: the cursor stays
+
+
+async def test_place_with_a_dot():
+    """z. puts the cursor row in the middle of the view, as zz does, and undoes the maximize its z began."""
+    with FakeGitHub(long_fixture()) as github:
+        tui = make_app(github)
+        async with tui.run_test(size=(80, 24)) as pilot:
+            await settle(pilot)
+            main = tui.main
+            diff = main.query_one("#diff")
+            await pilot.press("tab")
+            await settle(pilot)
+            await pilot.press("g", "g", "9", "9", "j")
+            height = diff.size.height
+            await pilot.press("z", "full_stop")
+            await pilot.pause(0.3)
+            middle = diff.starts[diff.cursor] - diff.scroll_offset.y
+            assert abs(middle - (height - 1) // 2) <= 1 and not main.max_diff and tui.focused is diff, (middle, height)
+            await pilot.press("z", "x")  # not a place: z is still the maximize
+            assert main.max_diff
+
+
+async def test_repository_steps():
+    """{ and } in the grouped list go to the previous and next repository, then to the first and last row; a count
+    repeats them, ungrouped they are the ends, and ctrl+o comes back."""
+    with FakeGitHub(fixture()) as github:
+        tui = make_app(github)
+        async with tui.run_test(size=(100, 40)) as pilot:
+            await settle(pilot)
+            main = tui.main
+            listing = main.query_one("#list")
+            assert [type(row).__name__ for row in listing.rows] == ["GroupRow", "PrRow", "GroupRow", "PrRow"]
+            listing.go(1)
+            await pilot.press("right_curly_bracket")
+            assert listing.cursor == 2
+            await pilot.press("right_curly_bracket")  # no repository after this one: the last row
+            assert listing.cursor == 3
+            await pilot.press("left_curly_bracket")
+            assert listing.cursor == 2
+            await pilot.press("left_curly_bracket", "left_curly_bracket")  # the header above, then the first row
+            assert listing.cursor == 0
+            await pilot.press("ctrl+o")  # a jump, as in vim
+            assert listing.cursor == 2
+            listing.go(0)
+            await pilot.press("5", "right_curly_bracket")
+            assert listing.cursor == 3
+            await pilot.press("g")  # ungroup: one run of pull requests
+            await settle(pilot)
+            assert not main.grouped and all(isinstance(row, core.PrRow) for row in listing.rows)
+            listing.go(0)
+            await pilot.press("right_curly_bracket")
+            assert listing.cursor == len(listing.rows) - 1
+            await pilot.press("left_curly_bracket")
+            assert listing.cursor == 0

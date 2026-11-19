@@ -10,6 +10,14 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The default theme is One Dark, where it was your terminal's own colors. `--theme terminal` (or `MORANN_THEME=terminal`,
   or `theme = terminal` in the config file) brings the terminal's colors back. `NO_COLOR` still drops color.
 
+### Added
+
+- A hint beside the scope in the header, `r refresh` while the list has the keys and `ctrl+r refresh` from the pull
+  request pane. It drops out before the scope, the breadcrumb or the counts would be cut.
+- More Vim motions: `ctrl+e` and `ctrl+y` scroll a line in the lists, the pull request pane and the file tree (with
+  a count, `5ctrl+e`, and in the help); `z.` is `zz`; `{` and `}` step between the repositories of the grouped list;
+  `ctrl+w` `b`, `t`, `p` and `ctrl+w` `ctrl+w`, `ctrl+h`, `ctrl+l` join `ctrl+w` `j`, `k`, `w`, `h`, `l`.
+
 ## 0.1.0 - 2026-11-19
 
 ### Added

@@ -198,6 +198,7 @@ class Main(
             yield Static(id="topinfo")
             yield Static("s", id="scopekey")  # the scope button's key, shown while the list has the keys
             yield Button("Mine", id="scope", compact=True)
+            yield Static(id="refreshkey")  # what refreshes, beside the scope; it goes first on a narrow bar
         with Vertical(id="top"):
             yield ListTabs(
                 *(Tab(f"{n} {label}", id=name) for n, (name, label) in enumerate(core.LIST_TABS.items(), 1)), id="tabs"
@@ -253,6 +254,7 @@ class Main(
             self.query_one(f"#{name}", Button).can_focus = False
         self.query_one("#scope", Button).can_focus = False
         self.query_one("#scope", Button).tooltip = "s: Mine, Personal or one organization"
+        self.query_one("#refreshkey").tooltip = "r: the lists again; ctrl+r: the open pull request too (:refresh)"
         self.set_interval(0.2, self.tick)
         for name, tip in TIPS.items():
             self.query_one(f"#{name}", Button).tooltip = tip.format(forge=self.forge.label)
@@ -335,6 +337,7 @@ class Main(
         self.show_crumbs()
         self.query_one("#scopekey").display = self.focus_pane == "list" and self.size.width >= 90
         self.show_scope()
+        self.show_refresh_hint()
 
         tabs = self.query_one("#tabs", Tabs)
         for name, label in self.list_tab_labels(waiting).items():
@@ -623,6 +626,7 @@ class Morann(App[None]):
     #topinfo { width: 1fr; height: 1; }
     #scope { width: auto; min-width: 0; height: 1; margin: 0 0 0 1; }
     #scopekey { width: auto; height: 1; margin: 0 0 0 1; color: $accent; text-style: bold; }
+    #refreshkey { width: auto; height: 1; margin: 0 0 0 1; }
     /* the panes: the focused one shows by its tab underline and its filled cursor row, never by a bar on its edge */
     #top, #bottom { height: 1fr; }
     #prhead { height: auto; }

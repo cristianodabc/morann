@@ -6,10 +6,10 @@ palette and the help. Mixed into Main; the jump list and the vim prefixes are in
 from __future__ import annotations
 
 from rich.text import Text
-from textual.widgets import Input, Static
+from textual.widgets import Button, Input, Static
 
 from morann import commands, core, keymap, markdown, statusline, theme
-from morann.chrome import CommandLine, crumbs
+from morann.chrome import CommandLine, crumbs, key_line
 from morann.dialogs import HelpScreen, PickerScreen
 from morann.main_motions import MOTIONS
 from morann.widgets import DiffRows, InlineText, ListRows
@@ -17,6 +17,8 @@ from morann.widgets import DiffRows, InlineText, ListRows
 LIST_TABS = core.LIST_TABS
 PANE_TABS = {"conversation": "Conversation", "commits": "Commits", "checks": "Checks", "files": "Files"}
 MOTION_WORDS = tuple(what.split()[0] for what, _crosses in MOTIONS.values())  # change, hunk, ... unresolved
+SCOPE_PADDING = 3  # columns the scope button takes beyond its label: its margin and its padding
+HINT_MARGIN = 3  # columns the refresh hint leaves free: its own margin and a little air
 INPUT_KEYS = (("enter", "done"), ("esc", "cancel"))
 COMMAND_KEYS = (("tab", "complete"), ("up down", "history"), ("enter", "run"), ("esc", "cancel"))
 
@@ -35,6 +37,20 @@ class NavMixin:
         width = max(12, self.size.width * 2 // 5)
         separator = self.icons.get("crumb", ">")
         self.query_one("#crumbs", Static).update(crumbs(self.crumb_parts(), self.app.painter.ink, separator, width))
+
+    def show_refresh_hint(self):
+        """`r refresh` beside the scope button, muted: r while the list has the keys, ctrl+r from the pull request pane.
+        It shows only where the whole top bar fits with it, so the scope, the crumbs and the counts are never cut for it."""
+        ink = self.app.painter.ink
+        hint = key_line([("r" if self.focus_pane == "list" else "ctrl+r", "refresh")], ink)
+        parts = (self.query_one(f"#{name}", Static) for name in ("brand", "crumbs", "topinfo"))
+        shown = sum(core.width_of(str(part.content)) for part in parts)
+        shown += 2 if self.query_one("#scopekey").display else 0  # its margin and the key
+        shown += core.width_of(str(self.query_one("#scope", Button).label)) + SCOPE_PADDING
+        widget = self.query_one("#refreshkey", Static)
+        widget.display = self.size.width - shown >= hint.cell_len + HINT_MARGIN
+        if widget.display:
+            widget.update(hint)
 
     def hint_place(self):
         """Which keys the statusline shows: the editor's, an input's, the file tree's, the list's or the open tab's."""
