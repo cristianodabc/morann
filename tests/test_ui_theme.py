@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Cristiano Carvalho
 # SPDX-License-Identifier: Apache-2.0
-"""Colors come from design tokens. By default every token is one of the terminal's own colors: its default foreground
+"""Colors come from design tokens. Morann starts in One Dark. In the terminal theme (`--theme terminal`) every token is one of the terminal's own colors: its default foreground
 and background and its 16 ANSI colors, never an RGB or 256-color value and no background of Morann's own, so Morann
 takes on the terminal's theme; only the diff, drawn like github.com's, leaves them on a 24-bit terminal. A named scheme
 (--theme, MORANN_THEME or the config) draws in its own colors and nothing else. NO_COLOR drops color."""
@@ -102,7 +102,8 @@ def assert_colorless(app, label):
 
 def test_choosing_a_theme(tmp_path):
     config = tmp_path / "config"
-    assert theme.chosen(None, {}) == "terminal" and theme.chosen("Nord", {}) == "nord"
+    assert theme.chosen(None, {}) == "one-dark" == theme.DEFAULT and theme.chosen("Nord", {}) == "nord"
+    assert theme.chosen("terminal", {}) == "terminal" == theme.chosen(None, {"MORANN_THEME": "Terminal"})
     assert theme.chosen(None, {"MORANN_THEME": "builtin"}) == "github-dark" == theme.chosen("github", {})
     config.write_text("owners = acme\ntheme = tokyo-night\n")
     env = {"MORANN_CONFIG": str(config)}
@@ -158,11 +159,11 @@ def test_ink():
 
 @pytest.mark.parametrize("truecolor", [False, True], ids=["16 colors", "24-bit"])
 @pytest.mark.parametrize("width", [70, 100])
-async def test_the_default_is_the_terminals_own_colors(width, truecolor):
-    """The terminal's colors everywhere and no background of Morann's own, but the diff: github's look, in the ANSI green
+async def test_the_terminal_theme_is_the_terminals_own_colors(width, truecolor):
+    """Chosen by name, the terminal's colors everywhere and no background of Morann's own, but the diff: github's look, in the ANSI green
     and red with 16 colors and in github's colors with 24-bit color."""
     with FakeGitHub(fixture()) as github:
-        tui = make_app(github, truecolor=truecolor)
+        tui = make_app(github, truecolor=truecolor, theme_name="terminal")
         async with tui.run_test(size=(width, 40)) as pilot:
             await settle(pilot)
             assert tui.theme == "terminal" and tui.native_ansi_color and tui.painter.ansi
@@ -174,6 +175,14 @@ async def test_the_default_is_the_terminals_own_colors(width, truecolor):
             await pilot.press("T")  # T tries the next theme, a scheme
             await settle(pilot)
             assert tui.theme == tui.themes[1] != "terminal" and not tui.painter.ansi
+
+
+async def test_the_default_is_one_dark():
+    with FakeGitHub(fixture()) as github:
+        tui = make_app(github, truecolor=True)
+        async with tui.run_test(size=(100, 40)) as pilot:
+            await settle(pilot)
+            assert tui.theme == "one-dark" and not tui.painter.ansi and tui.start_theme == "one-dark"
 
 
 @pytest.mark.parametrize("dark", [True, False])

@@ -43,8 +43,8 @@ def parse(argv: list[str]) -> argparse.Namespace:
     )
     parser.add_argument(
         "--theme",
-        help="colors: terminal (the default: your terminal's own) or a scheme such as catppuccin-mocha, tokyo-night, "
-        "gruvbox-dark, nord, rose-pine, catppuccin-latte, github-dark; also MORANN_THEME or `theme = NAME` in the "
+        help="colors: one-dark (the default), terminal (your terminal's own colors) or a scheme such as catppuccin-mocha, "
+        "tokyo-night, gruvbox-dark, nord, rose-pine, catppuccin-latte, github-dark; also MORANN_THEME or `theme = NAME` in the "
         "config; your own schemes go in ~/.config/morann/themes/NAME.toml",
     )
     parser.add_argument("--read-only", action="store_true", help="browse and keep drafts, but never post to GitHub")
