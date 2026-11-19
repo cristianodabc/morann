@@ -43,6 +43,7 @@ from morann.drafts import (  # noqa: F401
     build_plan,
     line_context,
     pending_review,
+    resumed,
     submit,
 )
 from morann.forge import Capability, ForgeError, lacks, select  # noqa: F401

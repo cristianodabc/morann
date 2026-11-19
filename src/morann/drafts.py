@@ -284,11 +284,17 @@ class Plan:
                 out.append(f"Review: {VERDICT[self.event]}, sent with your pending review ({held})")
             else:
                 out.append(f"Review: {VERDICT[self.event]}")
-            kept = self.resume is not None and self.resume["summary"].strip()
-            out.append(
-                "Summary: "
-                + (self.summary.strip() or ("(none new; the pending review keeps its own)" if kept else "(none)"))
-            )
+            existing = self.resume["summary"] if self.resume is not None else ""
+            if self.summary.strip():
+                out.append(f"Summary: {self.summary.strip()}")
+                if existing.strip():
+                    out.append("This replaces your existing summary:")
+                    out.extend("    " + line for line in existing.splitlines())
+            elif existing.strip():
+                out.append("Summary: (none new; your existing summary is kept)")
+                out.extend("    " + line for line in existing.splitlines())
+            else:
+                out.append("Summary: (none)")
             for c in self.comments:
                 out.append(f"Comment on {c['path']}:{c['line']} ({'new' if c['side'] == 'RIGHT' else 'old'} file):")
                 out.extend("    " + line for line in c["body"].splitlines() or [""])
@@ -332,8 +338,8 @@ def build_plan(pr: PullRequest, drafts: Drafts, event: str) -> Plan:
         problems.append(f"{pr.forge.label} does not let you {VERDICT[event]} on your own pull request")
     if event == "REQUEST_CHANGES" and (missing := lacks(pr.forge, Capability.REQUEST_CHANGES)):
         problems.append(missing)
-    resume = resumed(pr)
-    kept = resume is not None and resume["summary"].strip()  # the pending review already has one
+    resumable = resumed(pr)
+    kept = resumable is not None and resumable["summary"].strip()  # the pending review already has one
     if event == "REQUEST_CHANGES" and not drafts.summary.strip() and not kept:
         problems.append("request changes needs a summary: press m")
     comments = []
@@ -371,13 +377,15 @@ def build_plan(pr: PullRequest, drafts: Drafts, event: str) -> Plan:
     if problems:
         raise PlanError("; ".join(problems))
     pending = pr.pending is not None or any(c.pending and c.author == pr.viewer for t in pr.threads for c in t.comments)
+    review_content = bool(comments or replies or drafts.summary.strip() or event != "COMMENT")
+    resume = resumable if review_content else None  # resolves and conversation comments never submit it
     warnings = []
     if resume is not None:
         if resume["commit"] and resume["commit"] != pr.head:
             warnings.append(
                 f"your pending review was started at {resume['commit'][:7]}; the pull request is at {pr.head[:7]} now"
             )
-    elif pending:
+    elif pending and resumable is None:
         warnings.append(pending_review(pr.forge))
     plan = Plan(
         repo=pr.repo,

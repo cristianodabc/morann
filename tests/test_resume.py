@@ -159,16 +159,95 @@ def test_a_confirmed_submit_adds_to_the_pending_review_and_submits_it():
         assert load().pending is None  # it was submitted: GitHub has no pending review now
 
 
-@pytest.mark.parametrize("event", ["COMMENT", "APPROVE"])
-def test_a_resumed_review_submits_with_nothing_new(event):
-    """Nothing drafted: the pending review goes as it is, with the verdict, and without a summary the forge keeps its own."""
+def test_a_verdict_submits_the_pending_review_as_it_is():
+    """Nothing drafted, but a verdict chosen: the pending review goes as it is. Without a summary the forge keeps its own."""
     with FakeGitHub(pending_fixture()) as github:
         pr = load()
         store = core.DraftStore(github.dir / "drafts")
-        plan = core.build_plan(pr, core.Drafts(pr.repo, pr.number), event)
+        plan = core.build_plan(pr, core.Drafts(pr.repo, pr.number), "APPROVE")
         assert plan.has_review() and plan.lines()[3] == "Summary: (none)"
         core.submit(GitHubProvider(), plan, plan.fingerprint(), store)
-        assert mutations(github) == [("submitPullRequestReview", {"review": "PRR_pending", "event": event})]
+        assert mutations(github) == [("submitPullRequestReview", {"review": "PRR_pending", "event": "APPROVE"})]
+
+
+def test_a_comment_verdict_with_nothing_drafted_is_nothing_to_submit():
+    with FakeGitHub(pending_fixture()) as github:
+        pr = load()
+        with refused(core.PlanError, "nothing to submit"):
+            core.build_plan(pr, core.Drafts(pr.repo, pr.number), "COMMENT")
+        assert not github.posts()
+
+
+def test_resolves_and_conversation_comments_leave_the_pending_review_pending():
+    """They are not review content: only they go out, the pending review is not even read, and no warning is shown."""
+    for kind in ("resolve", "note"):
+        with FakeGitHub(pending_fixture()) as github:
+            pr = load()
+            store = core.DraftStore(github.dir / "drafts")
+            drafts = core.Drafts(pr.repo, pr.number)
+            if kind == "resolve":
+                drafts.toggle_resolve(pr.thread("T1"))
+            else:
+                drafts.add_note("thanks for the context")
+            store.save(drafts)
+            plan = core.build_plan(pr, drafts, "COMMENT")
+            assert plan.resume is None and plan.warnings == () and not plan.has_review()
+            assert not any("Review:" in line for line in plan.lines())
+            core.submit(GitHubProvider(), plan, plan.fingerprint(), store)
+            if kind == "resolve":
+                assert mutations(github) == [("resolveReviewThread", {"id": "T1"})] and not rest_writes(github)
+            else:
+                assert not mutations(github) and rest_writes(github) == ["repos/acme/app/issues/7/comments"]
+            assert not any("PendingReview" in call["stdin"] for call in github.calls())
+            assert "submitted" not in github.data()
+            assert github.data()["prs"]["acme/app#7"]["node"]["pendingReviews"]["nodes"][0]["id"] == "PRR_pending"
+
+
+def test_a_reply_alone_still_joins_the_pending_review():
+    with FakeGitHub(pending_fixture()):
+        pr = load()
+        drafts = core.Drafts(pr.repo, pr.number)
+        drafts.add_reply(pr.thread("T1"), "thanks")
+        plan = core.build_plan(pr, drafts, "COMMENT")
+        assert plan.resume is not None and plan.lines()[2].startswith("Review: comment, sent with your pending review")
+
+
+def test_a_typed_summary_replaces_the_one_on_the_pending_review_and_the_plan_says_so():
+    data = pending_fixture()
+    data["prs"]["acme/app#7"]["node"]["pendingReviews"] = {"nodes": [pending_review_node(body="Please look at this")]}
+    with FakeGitHub(data) as github:
+        pr = load()
+        store = core.DraftStore(github.dir / "drafts")
+        drafts = core.Drafts(pr.repo, pr.number, summary="LGTM overall")
+        plan = core.build_plan(pr, drafts, "COMMENT")
+        assert plan.lines()[3:6] == [
+            "Summary: LGTM overall",
+            "This replaces your existing summary:",
+            "    Please look at this",
+        ]
+        core.submit(GitHubProvider(), plan, plan.fingerprint(), store)
+        assert github.data()["submitted"]["PRR_pending"] == {"event": "COMMENT", "body": "LGTM overall"}
+
+
+def test_without_a_typed_summary_the_pending_review_keeps_its_own_and_the_plan_shows_it():
+    data = pending_fixture()
+    node = pending_review_node(body="Please look at this\nand at that")
+    data["prs"]["acme/app#7"]["node"]["pendingReviews"] = {"nodes": [node]}
+    with FakeGitHub(data) as github:
+        pr = load()
+        store = core.DraftStore(github.dir / "drafts")
+        plan = core.build_plan(pr, core.Drafts(pr.repo, pr.number), "APPROVE")
+        assert plan.lines()[3:6] == [
+            "Summary: (none new; your existing summary is kept)",
+            "    Please look at this",
+            "    and at that",
+        ]
+        core.submit(GitHubProvider(), plan, plan.fingerprint(), store)
+        assert mutations(github) == [("submitPullRequestReview", {"review": "PRR_pending", "event": "APPROVE"})]
+        assert github.data()["submitted"]["PRR_pending"] == {
+            "event": "APPROVE",
+            "body": "Please look at this\nand at that",
+        }
 
 
 def test_the_summary_already_on_the_pending_review_counts():
@@ -178,7 +257,7 @@ def test_the_summary_already_on_the_pending_review_counts():
     with FakeGitHub(data):
         pr = load()
         plan = core.build_plan(pr, core.Drafts(pr.repo, pr.number), "REQUEST_CHANGES")
-        assert plan.lines()[3] == "Summary: (none new; the pending review keeps its own)"
+        assert plan.lines()[3:5] == ["Summary: (none new; your existing summary is kept)", "    Please look at this"]
     with FakeGitHub(pending_fixture()):
         pr = load()
         with refused(core.PlanError, "request changes needs a summary"):
@@ -190,7 +269,7 @@ def test_a_pending_review_started_at_an_older_head_is_said_so():
     data["prs"]["acme/app#7"]["node"]["pendingReviews"] = {"nodes": [pending_review_node(commit={"oid": MOVED})]}
     with FakeGitHub(data):
         pr = load()
-        plan = core.build_plan(pr, core.Drafts(pr.repo, pr.number), "COMMENT")
+        plan = core.build_plan(pr, core.Drafts(pr.repo, pr.number), "APPROVE")
         assert plan.warnings == (
             f"your pending review was started at {MOVED[:7]}; the pull request is at {HEAD[:7]} now",
         )
@@ -301,7 +380,7 @@ def test_a_forge_that_cannot_resume_keeps_the_old_flow_and_refuses_a_resumed_pla
         store = core.DraftStore(github.dir / "drafts")
         plan = core.build_plan(pr, drafted(store, pr), "COMMENT")
         assert plan.resume is None and core.pending_review(bare) in plan.warnings  # GitHub's old refusal is the warning
-        resumed = core.build_plan(load(), core.Drafts(pr.repo, pr.number), "COMMENT")
+        resumed = core.build_plan(load(), core.Drafts(pr.repo, pr.number), "APPROVE")
         with pytest.raises(core.SubmitError, match="nothing was posted; Bare has no resuming a pending review"):
             core.submit(bare, resumed, resumed.fingerprint(), store)
         assert not github.posts()
@@ -391,11 +470,14 @@ async def test_resume_and_submit_with_the_review_started_empty():
             await open_files(pilot, main)
             await pilot.press("v", "v")
             await settle(pilot)
-            assert main.submitting and main.submitting["plan"].resume["id"] == "PRR_pending"
+            assert main.submitting and main.submitting["plan"] is None  # a comment verdict with nothing drafted
+            await pilot.press("a")
+            await settle(pilot)
+            assert main.submitting["plan"].resume["id"] == "PRR_pending"
             assert "y post" in str(main.query_one("#confirm-keys").content)
             await pilot.press("y")
             await settle(pilot)
-            assert mutations(github) == [("submitPullRequestReview", {"review": "PRR_pending", "event": "COMMENT"})]
+            assert mutations(github) == [("submitPullRequestReview", {"review": "PRR_pending", "event": "APPROVE"})]
 
 
 async def test_the_pending_review_vanishing_before_the_submit_keeps_the_drafts_in_the_app():

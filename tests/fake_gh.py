@@ -122,6 +122,10 @@ def fake_gh(args):
             if name == "submitPullRequestReview":  # a submitted review is no longer pending, on any pull request
                 for pull in data["prs"].values():
                     nodes = (pull["node"].get("pendingReviews") or {}).get("nodes") or []
+                    for node in nodes:
+                        if node["id"] == variables["review"]:  # GitHub keeps the old body unless a new one comes
+                            body = variables["body"] if "body" in variables else node.get("body", "")
+                            data.setdefault("submitted", {})[node["id"]] = {"event": variables["event"], "body": body}
                     pull["node"]["pendingReviews"] = {"nodes": [n for n in nodes if n["id"] != variables["review"]]}
                 save(path, data)
             return answer({"data": {name: {"ok": True}}})

@@ -60,9 +60,7 @@ class ReviewMixin:
         """The viewer's pending review on the open pull request when a submit resumes it, else None: it must exist on
         the forge, which must be able to add to it."""
         pr = self.pr
-        if pr is None or pr.pending is None or core.Capability.PENDING_REVIEW not in pr.forge.capabilities:
-            return None
-        return pr.pending
+        return pr.pending if pr is not None and core.resumed(pr) else None
 
     def pending_words(self):
         """The pending review in a few words, such as `3 comments`."""

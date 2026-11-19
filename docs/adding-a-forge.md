@@ -115,7 +115,8 @@ so it can raise `ForgeError`.
 A pending review is the viewer's review that is started and not submitted. With `PENDING_REVIEW`, `build_pr()` fills
 `PullRequest.pending` with it, and one confirmed submit calls `pending_review()` again, `add_pending_comment()` for each
 comment, `add_pending_reply()` for each reply and `submit_pending_review()` once, instead of `post_review()` and
-`post_reply()`. `pending_review()` returns the viewer's own review only and `None` once it is gone, which stops the
+`post_reply()`. That happens only when the drafts hold review content (an inline comment, a reply, a summary or a
+verdict other than comment); resolves and conversation comments alone never touch it. `pending_review()` returns the viewer's own review only and `None` once it is gone, which stops the
 submit with the drafts kept. A forge without the capability that is handed a resumed plan refuses it with a
 `ForgeError`-style message naming the forge ("Bare has no resuming a pending review").
 
