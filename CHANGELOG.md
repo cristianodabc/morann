@@ -5,6 +5,8 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+## 0.2.0 - 2026-11-19
+
 ### Changed
 
 - The default theme is One Dark, where it was your terminal's own colors. `--theme terminal` (or `MORANN_THEME=terminal`,
