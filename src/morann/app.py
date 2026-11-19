@@ -9,9 +9,9 @@ below with its header buttons (Comment, Review, Approve, Request changes, Merge,
 syntax highlighted, with the review threads as cards under their lines. Comments, replies and the summary are
 written inline.
 
-Colors come from design tokens (theme.py). By default they are the terminal's own colors, so Morann follows the
-terminal's theme; --theme, MORANN_THEME or the config's theme line picks a named scheme instead, and T tries the next
-one. NO_COLOR drops color."""
+Colors come from design tokens (theme.py). By default they are One Dark's; --theme, MORANN_THEME or the config's theme
+line picks another named scheme, `terminal` among them (the terminal's own colors, so Morann follows its theme), and T
+tries the next one. NO_COLOR drops color."""
 
 from __future__ import annotations
 
@@ -708,9 +708,11 @@ class Morann(App[None]):
         self.terminal_colors = terminal_colors  # termcolors.TerminalColors the terminal answered with, or None
         self.dark_terminal = terminal_colors.dark if terminal_colors else termcolors.dark_background(os.environ)
         self.schemes = theme.schemes()
-        wanted = theme.DEFAULT if self.no_color_env else theme.chosen(theme_name)
+        wanted = theme.TERMINAL_NAME if self.no_color_env else theme.chosen(theme_name)
         self.start_theme = theme.check(wanted, self.schemes)
-        self.themes = [theme.DEFAULT] if self.no_color_env else [theme.DEFAULT, *self.schemes]  # what T steps through
+        self.themes = (
+            [theme.TERMINAL_NAME] if self.no_color_env else [theme.TERMINAL_NAME, *self.schemes]
+        )  # what T steps through
         # The terminal's theme draws in native ANSI, so the terminal's own palette is used as is; a scheme in RGB. Under
         # NO_COLOR it is native ANSI throughout: Textual then removes color, where its grayscale filter for RGB themes
         # fails on unstyled segments.

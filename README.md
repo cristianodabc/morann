@@ -78,7 +78,7 @@ theme = catppuccin-mocha
 | `MORANN_OWNERS` | none | the owners to list when no `--owner` or `--repo` is given |
 | `MORANN_CONFIG` | `${XDG_CONFIG_HOME:-~/.config}/morann/config` | the config file |
 | `MORANN_HOME` | `${XDG_CACHE_HOME:-~/.cache}/morann` | drafts, the pull request cache and the UI state |
-| `MORANN_THEME` | `terminal` | the theme, as `--theme` and the config's `theme = NAME` line set it |
+| `MORANN_THEME` | `one-dark` | the theme, as `--theme` and the config's `theme = NAME` line set it |
 | `MORANN_THEMES` | `${XDG_CONFIG_HOME:-~/.config}/morann/themes` | the folder of your own color schemes |
 | `MORANN_ASK_COLORS` | `1` | `0` stops Morann asking the terminal for its colors at start |
 | `MORANN_STATUSLINE_LEFT`, `MORANN_STATUSLINE_RIGHT` | as the config | the statusline's segments, in order |
@@ -92,24 +92,24 @@ theme = catppuccin-mocha
 
 ### Colors
 
-By default Morann uses your terminal's own colors: its default foreground and background and its 16 ANSI colors,
-and no background of its own. It looks like the rest of your terminal and follows its theme as that changes.
+By default Morann draws in the One Dark color scheme. Choose another with `--theme NAME`, `MORANN_THEME=NAME`, or a
+`theme = NAME` line in the config file; `T` in the app tries the next one, and `:theme NAME` switches by name.
+
+`--theme terminal` uses your terminal's own colors instead: its default foreground and background and its 16 ANSI
+colors, and no background of its own. It looks like the rest of your terminal and follows its theme as that changes.
 Hierarchy comes from bold, dim and reverse, and status from the ANSI colors, each with one meaning everywhere: green
 passing or approved, red failing, changes requested or conflicting, yellow waiting or behind its base, blue new
 activity, magenta merged and your unsent drafts. Each also has a glyph, so none depends on color alone.
 
-A named color scheme draws in its own colors instead. Choose one with `--theme NAME`, `MORANN_THEME=NAME`, or a
-`theme = NAME` line in the config file; `T` in the app tries the next one, and `:theme NAME` switches by name.
-
 | Name | Scheme |
 | --- | --- |
-| `terminal` | your terminal's own colors (the default) |
+| `terminal` | your terminal's own colors |
 | `catppuccin-mocha`, `catppuccin-latte` | [Catppuccin](https://catppuccin.com) dark and light |
 | `tokyo-night` | [Tokyo Night](https://github.com/folke/tokyonight.nvim) |
 | `gruvbox-dark` | [Gruvbox](https://github.com/morhetz/gruvbox) |
 | `nord` | [Nord](https://www.nordtheme.com) |
 | `rose-pine` | [Rosé Pine](https://rosepinetheme.com) |
-| `one-dark` | [One Dark](https://github.com/atom/atom/tree/master/packages/one-dark-syntax), from Atom |
+| `one-dark` | [One Dark](https://github.com/atom/atom/tree/master/packages/one-dark-syntax), from Atom (the default) |
 | `github-dark`, `github-light` | github.com's dark and light modes |
 
 To add your own, put a file `NAME.toml` in `~/.config/morann/themes` (or the folder `MORANN_THEMES` names) and

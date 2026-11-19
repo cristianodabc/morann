@@ -3,10 +3,11 @@
 """Morann's design tokens: the semantic colors every part of the UI draws with, and the themes that fill them.
 
 Code never names a raw color. It asks for a token (ok, bad, warn, accent, muted...) and `Ink` answers with a style in
-the current theme. The default theme, terminal, fills every token with the terminal's own default colors and its 16
-ANSI colors and paints no background, so Morann takes on whatever theme the terminal has. The other themes are named
-color schemes (Catppuccin, Tokyo Night, Gruvbox, Nord, Rose Pine, GitHub), each a TOML file: the built-in ones in
-morann/themes, and your own in ~/.config/morann/themes (MORANN_THEMES names another folder)."""
+the current theme. The default theme is One Dark. The terminal theme fills every token with the terminal's own default
+colors and its 16 ANSI colors and paints no background, so Morann takes on whatever theme the terminal has. The other
+themes are named color schemes (Catppuccin, Tokyo Night, Gruvbox, Nord, Rose Pine, One Dark, GitHub), each a TOML
+file: the built-in ones in morann/themes, and your own in ~/.config/morann/themes (MORANN_THEMES names another
+folder)."""
 
 from __future__ import annotations
 
@@ -84,7 +85,8 @@ TERMINAL = Tokens(
     selection="",
 )
 
-DEFAULT = "terminal"
+TERMINAL_NAME = "terminal"  # the name of the terminal's own colors
+DEFAULT = "one-dark"  # the theme when --theme, MORANN_THEME and the config's theme line are all unset
 ALIASES = {"github": "github-dark", "builtin": "github-dark", "": DEFAULT}  # names earlier versions used
 BUILT_IN = Path(__file__).with_name("themes")
 
@@ -136,8 +138,8 @@ def schemes(environ: Mapping[str, str] | None = None) -> dict[str, Scheme]:
 
 
 def chosen(flag: str | None, environ: Mapping[str, str] | None = None) -> str:
-    """The theme to start with: --theme, else MORANN_THEME, else the config file's `theme = NAME` line, else the
-    terminal's colors."""
+    """The theme to start with: --theme, else MORANN_THEME, else the config file's `theme = NAME` line, else One
+    Dark."""
     environ = os.environ if environ is None else environ
     value = flag or environ.get("MORANN_THEME") or config_value("theme", environ) or ""
     name = value.strip().lower()
@@ -146,9 +148,9 @@ def chosen(flag: str | None, environ: Mapping[str, str] | None = None) -> str:
 
 def check(name: str, known: Mapping[str, Scheme]) -> str:
     """The name, when it is the terminal's colors or a scheme; else a UsageError listing the names there are."""
-    if name == DEFAULT or name in known:
+    if name == TERMINAL_NAME or name in known:
         return name
-    raise UsageError(f"no theme named {name!r}; there are: {', '.join([DEFAULT, *sorted(known)])}")
+    raise UsageError(f"no theme named {name!r}; there are: {', '.join([TERMINAL_NAME, *sorted(known)])}")
 
 
 def textual_theme(name: str, tokens: Tokens) -> Theme:
@@ -189,7 +191,7 @@ def terminal_theme() -> Theme:
     """The terminal's colors: its default foreground and background (no background of Morann's own) and its 16 ANSI
     colors, with cyan as the accent. Hierarchy comes from bold, dim and reverse, not from shades."""
     return Theme(
-        name=DEFAULT,
+        name=TERMINAL_NAME,
         ansi=True,
         primary="ansi_cyan",
         secondary="ansi_magenta",
