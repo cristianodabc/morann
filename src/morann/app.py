@@ -9,8 +9,9 @@ below with its header buttons (Comment, Review, Approve, Request changes, Merge,
 syntax highlighted, with the review threads as cards under their lines. Comments, replies and the summary are
 written inline.
 
-Colors come from design tokens (theme.py). By default they are One Dark's; --theme, MORANN_THEME or the config's theme line picks another named scheme,
-`terminal` among them (the terminal's own colors, so Morann follows its theme), and T tries the next one. NO_COLOR drops color."""
+Colors come from design tokens (theme.py). By default they are One Dark's; --theme, MORANN_THEME or the config's theme
+line picks another named scheme, `terminal` among them (the terminal's own colors, so Morann follows its theme), and T
+tries the next one. NO_COLOR drops color."""
 
 from __future__ import annotations
 

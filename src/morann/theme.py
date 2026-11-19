@@ -5,8 +5,9 @@
 Code never names a raw color. It asks for a token (ok, bad, warn, accent, muted...) and `Ink` answers with a style in
 the current theme. The default theme is One Dark. The terminal theme fills every token with the terminal's own default
 colors and its 16 ANSI colors and paints no background, so Morann takes on whatever theme the terminal has. The other
-themes are named color schemes (Catppuccin, Tokyo Night, Gruvbox, Nord, Rose Pine, One Dark, GitHub), each a TOML file: the built-in ones in
-morann/themes, and your own in ~/.config/morann/themes (MORANN_THEMES names another folder)."""
+themes are named color schemes (Catppuccin, Tokyo Night, Gruvbox, Nord, Rose Pine, One Dark, GitHub), each a TOML
+file: the built-in ones in morann/themes, and your own in ~/.config/morann/themes (MORANN_THEMES names another
+folder)."""
 
 from __future__ import annotations
 
