@@ -18,6 +18,7 @@ from morann.models import (
     Lists,
     Note,
     Page,
+    PendingReview,
     PrRow,
     PrState,
     PullRequest,
@@ -189,6 +190,31 @@ class GitHubProvider:
         """GitHub's "Add single comment": a review comment created with no review, which GitHub publishes at once."""
         payload = {"body": body, "commit_id": commit, "path": path, "line": int(line), "side": side}
         self.gh.post(f"repos/{repo}/pulls/{int(number)}/comments", payload)
+
+    # The viewer's pending review.
+
+    def pending_review(self, repo: str, number: int) -> PendingReview | None:
+        owner, name = check_repo(repo).split("/")
+        data = self.gh.graphql(queries.PENDING_QUERY, {"owner": owner, "name": name, "number": int(number)})
+        node = (data.get("repository") or {}).get("pullRequest")
+        if not node:
+            raise ForgeError(f"{repo}#{number} not found, or this login cannot read it")
+        return parse.resumable(node, (data.get("viewer") or {}).get("login") or "")
+
+    def add_pending_comment(
+        self, repo: str, number: int, review_id: str, path: str, side: str, line: int, body: str
+    ) -> None:
+        variables = {"review": review_id, "path": path, "line": int(line), "side": side, "body": body}
+        self.gh.graphql(queries.ADD_PENDING_THREAD, variables)
+
+    def add_pending_reply(self, repo: str, number: int, review_id: str, thread_id: str, body: str) -> None:
+        self.gh.graphql(queries.ADD_PENDING_REPLY, {"review": review_id, "thread": thread_id, "body": body})
+
+    def submit_pending_review(self, repo: str, number: int, review_id: str, event: str, body: str) -> None:
+        variables: dict[str, Any] = {"review": review_id, "event": event}
+        if body.strip():
+            variables["body"] = body
+        self.gh.graphql(queries.SUBMIT_PENDING, variables)
 
     # Acting on a pull request.
 

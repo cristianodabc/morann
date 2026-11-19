@@ -21,10 +21,15 @@ class SingleMixin:
         choices = []
         if not self.forge.read_only and (capability is None or capability in self.forge.capabilities):
             choices.append(("s", now_label, "now"))
-        choices += [("r", review_label, "review"), ("n esc", "Cancel", None)]
-        what = (
-            f"{doing}: send it on its own now, after you see exactly what goes, or keep it as a draft in a review "
-            f"of #{self.pr.number}, posted as one when you choose."
+        resuming = self.resuming()
+        choices += [
+            ("r", "Add to your pending review" if resuming else review_label, "review"),
+            ("n esc", "Cancel", None),
+        ]
+        what = f"{doing}: send it on its own now, after you see exactly what goes, or keep it as a draft in " + (
+            f"your pending review of #{self.pr.number} on {self.forge.label}, sent with it when you submit it."
+            if resuming
+            else f"a review of #{self.pr.number}, posted as one when you choose."
         )
 
         def picked(choice):

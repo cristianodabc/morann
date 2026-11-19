@@ -35,7 +35,15 @@ SCOPE_QUERY = """query($q: String!, $first: Int!, $after: String) {
 fragment row on PullRequest {""" + LIST_QUERY.split("fragment row on PullRequest {", 1)[1]
 
 
-PR_QUERY = """query($owner: String!, $name: String!, $number: Int!) {
+# The viewer's pending review, which GitHub shows to its author only.
+PENDING_FRAGMENT = """
+fragment pendingReview on PullRequestReview {
+  id body updatedAt commit { oid } author { login } comments { totalCount }
+}"""
+
+
+PR_QUERY = (
+    """query($owner: String!, $name: String!, $number: Int!) {
   viewer { login }
   repository(owner: $owner, name: $name) { pullRequest(number: $number) {
     title body url isDraft state baseRefName headRefName headRefOid author { login } createdAt lastEditedAt
@@ -48,6 +56,7 @@ PR_QUERY = """query($owner: String!, $name: String!, $number: Int!) {
     reviews(first: 100) { pageInfo { hasNextPage } nodes { databaseId state body submittedAt lastEditedAt author { login } } }
     latestReviews(first: 50) { nodes { state author { login __typename } commit { oid } } }
       reviewRequests(first: 50) { nodes { requestedReviewer { __typename ... on User { login } ... on Team { slug } } } }
+    pendingReviews: reviews(states: PENDING, first: 5) { nodes { ...pendingReview } }
     commits(last: 100) { totalCount nodes { commit { oid messageHeadline committedDate author { name user { login } } } } }
     headCommit: commits(last: 1) { nodes { commit { statusCheckRollup { contexts(first: 100) { nodes { __typename
       ... on CheckRun { databaseId name status conclusion title detailsUrl isRequired(pullRequestNumber: $number)
@@ -55,6 +64,20 @@ PR_QUERY = """query($owner: String!, $name: String!, $number: Int!) {
       ... on StatusContext { context state targetUrl description isRequired(pullRequestNumber: $number) } } } } } } }
   } }
 }"""
+    + PENDING_FRAGMENT
+)
+
+
+# The same, alone: read again just before a submit resumes it. The answer is still checked against the viewer.
+PENDING_QUERY = (
+    """query PendingReview($owner: String!, $name: String!, $number: Int!) {
+  viewer { login }
+  repository(owner: $owner, name: $name) { pullRequest(number: $number) {
+    pendingReviews: reviews(states: PENDING, first: 5) { nodes { ...pendingReview } }
+  } }
+}"""
+    + PENDING_FRAGMENT
+)
 
 
 STATE_QUERY = """query($owner: String!, $name: String!, $number: Int!) {
@@ -92,6 +115,27 @@ RESOLVE = "mutation($id: ID!) { resolveReviewThread(input: {threadId: $id}) { th
 
 
 UNRESOLVE = "mutation($id: ID!) { unresolveReviewThread(input: {threadId: $id}) { thread { id isResolved } } }"
+
+
+# Resuming the viewer's pending review: a comment, a reply, and the submit that sends them all with a verdict.
+
+ADD_PENDING_THREAD = (
+    "mutation($review: ID!, $path: String!, $line: Int!, $side: DiffSide!, $body: String!) { "
+    "addPullRequestReviewThread(input: {pullRequestReviewId: $review, path: $path, line: $line, side: $side, "
+    "body: $body}) { thread { id } } }"
+)
+
+
+ADD_PENDING_REPLY = (
+    "mutation($review: ID!, $thread: ID!, $body: String!) { addPullRequestReviewThreadReply(input: "
+    "{pullRequestReviewId: $review, pullRequestReviewThreadId: $thread, body: $body}) { comment { id } } }"
+)
+
+
+SUBMIT_PENDING = (
+    "mutation($review: ID!, $event: PullRequestReviewEvent!, $body: String) { submitPullRequestReview(input: "
+    "{pullRequestReviewId: $review, event: $event, body: $body}) { pullRequestReview { id state } } }"
+)
 
 # A file at a commit, to show the unchanged lines between a diff's hunks.
 

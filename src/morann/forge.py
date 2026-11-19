@@ -25,6 +25,7 @@ if TYPE_CHECKING:
         Lists,
         Note,
         Page,
+        PendingReview,
         PrRow,
         PrState,
         PullRequest,
@@ -59,6 +60,7 @@ class Capability(enum.Enum):
     SINGLE_COMMENTS = "comments outside a review"
     EDIT_COMMENTS = "editing comments"
     DELETE_COMMENTS = "deleting comments"
+    PENDING_REVIEW = "resuming a pending review"
 
 
 class Forge(Protocol):
@@ -151,6 +153,28 @@ class Forge(Protocol):
     ) -> None:
         """One comment on a line of the diff at `commit`, posted on its own at once, outside any review
         (Capability.SINGLE_COMMENTS). `side` is LEFT for the old file's line, RIGHT for the new one's."""
+
+    # The viewer's pending review (Capability.PENDING_REVIEW): a review started and not submitted, on the forge's own
+    # site or earlier from Morann. A submit adds to it and submits it instead of creating a second review. A forge
+    # without the capability never has these called: the plan holds no pending review, and `drafts.submit` refuses one
+    # with the forge's own name.
+
+    def pending_review(self, repo: str, number: int) -> PendingReview | None:
+        """The viewer's pending review on the pull request, read now, or None without one. Another person's pending
+        review is never visible and never returned."""
+
+    def add_pending_comment(
+        self, repo: str, number: int, review_id: str, path: str, side: str, line: int, body: str
+    ) -> None:
+        """One comment on a line of the diff, added to the pending review. It stays pending until the review is
+        submitted. `side` is LEFT for the old file's line, RIGHT for the new one's."""
+
+    def add_pending_reply(self, repo: str, number: int, review_id: str, thread_id: str, body: str) -> None:
+        """A reply to a review thread, added to the pending review and sent with it."""
+
+    def submit_pending_review(self, repo: str, number: int, review_id: str, event: str, body: str) -> None:
+        """Submit the pending review with a verdict (COMMENT, APPROVE or REQUEST_CHANGES). An empty `body` leaves the
+        summary the review already has."""
 
     # Acting on a pull request. actions.run_action and actions.run_updates check the plan first.
 

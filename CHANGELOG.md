@@ -5,6 +5,14 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+### Added
+
+- A review you started and did not submit, on GitHub's own site or earlier from Morann, is resumed when you open the
+  pull request: its comments show under their lines marked pending, new comments and replies join it, and the one
+  confirmed submit sends it with the verdict and summary you choose, instead of creating a second review. The header
+  and the review bar say when one is being resumed. If it was submitted or discarded elsewhere first, nothing is sent
+  and your drafts are kept. A forge that cannot do this keeps the old flow (`Capability.PENDING_REVIEW`).
+
 ## 0.2.0 - 2026-11-19
 
 ### Changed

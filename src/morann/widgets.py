@@ -535,7 +535,16 @@ class Info:
 def failure(error):
     """One line for an error raised in a worker: Morann's own errors as they are, anything else with its type."""
     if isinstance(
-        error, (core.ForgeError, core.NotConfirmed, core.HeadMoved, core.SubmitError, core.DraftError, core.UsageError)
+        error,
+        (
+            core.ForgeError,
+            core.NotConfirmed,
+            core.HeadMoved,
+            core.PendingGone,
+            core.SubmitError,
+            core.DraftError,
+            core.UsageError,
+        ),
     ):
         return str(error)
     return f"unexpected error ({type(error).__name__}: {error})"

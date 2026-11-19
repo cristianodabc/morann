@@ -192,6 +192,18 @@ class TreeNode:
     children: list[TreeNode] = field(default_factory=list)
 
 
+@dataclass(frozen=True)
+class PendingReview:
+    """The viewer's own review on the forge that is not submitted yet. Only its author can see it. Morann resumes it:
+    new comments and replies join it, and the viewer's submit sends it with the chosen verdict."""
+
+    id: str  # the forge's id for the review, what the calls that add to it and submit it name
+    comments: int = 0  # the comments already in it
+    body: str = ""  # the summary already on it
+    commit: str = ""  # the head it was started at
+    updated: str = ""  # when it last changed, ISO time
+
+
 @dataclass
 class Comment:
     id: int  # the id a reply names
@@ -293,6 +305,7 @@ class PullRequest:
     files_loading: bool = False  # the conversation, commits and checks are in; the files are still on their way
     fetched: str = ""  # when the forge was read, ISO time
     edited: bool = False  # the description changed since it was posted
+    pending: PendingReview | None = None  # the viewer's unsubmitted review, which a submit resumes
 
     @property
     def key(self) -> str:

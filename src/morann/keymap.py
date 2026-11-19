@@ -174,7 +174,8 @@ SECTIONS = (
             Key("m", "write the review summary", "", PANE),
             Key(
                 "v",
-                "start a review (opening a pull request never does); once on, show what it would post",
+                "start a review (opening a pull request never does) or resume your pending review on {forge}; "
+                "once on, show what it would post",
                 "review",
                 BOTH,
                 "submit",
@@ -192,11 +193,17 @@ SECTIONS = (
             Key("c a r", "Comment, Approve, Request changes (needs a summary)", "", ("review",)),
             Key("m", "write the summary: ctrl+s keeps it, esc goes back", "", ("review",)),
             Key("l", "list every comment, reply and resolve it would post", "", ("review",)),
-            Key("y", "post all of it as one review", "", ("review",)),
+            Key(
+                "y",
+                "post all of it as one review; with a pending review on {forge}, add it there and submit that one",
+                "",
+                ("review",),
+            ),
             Key("n esc", "back, posting nothing", "", ("review",)),
             Key(
                 "D",
-                "discard the review and its drafts, after a y; nothing is posted (:review discard)",
+                "discard the review and its drafts, after a y; nothing is posted, and a pending review on {forge} "
+                "stays (:review discard)",
                 "",
                 ("review",),
             ),

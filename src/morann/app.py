@@ -393,6 +393,12 @@ class Main(
             out.append(
                 f" Reviewing: {count} draft{'s' if count != 1 else ''} ", self.app.painter.ink.chip("local", bold=True)
             )
+            if self.resuming():  # the one on the forge that these drafts join
+                out.append(" ")
+                out.append(f" resuming your pending review: {self.pending_words()} ", self.app.painter.ink.chip("warn"))
+        elif self.resuming():  # started on the forge and not submitted, with no drafts here yet
+            out.append("  ")
+            out.append(f" Pending review: {self.pending_words()} ", self.app.painter.ink.chip("warn", bold=True))
         if self.mode == "files" and self.pr.files:  # which file first, so { and } are enough without the tree
             item = self.pr.files[self.file_index]
             out.append(f"  file {self.file_index + 1}/{len(self.pr.files)} ", Style(dim=True))

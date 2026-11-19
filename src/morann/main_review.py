@@ -56,6 +56,19 @@ class ReviewMixin:
         """Whether a review of the open pull request is on: started, or holding drafts."""
         return self.drafts is not None and not self.drafts.empty()
 
+    def resuming(self):
+        """The viewer's pending review on the open pull request when a submit resumes it, else None: it must exist on
+        the forge, which must be able to add to it."""
+        pr = self.pr
+        if pr is None or pr.pending is None or core.Capability.PENDING_REVIEW not in pr.forge.capabilities:
+            return None
+        return pr.pending
+
+    def pending_words(self):
+        """The pending review in a few words, such as `3 comments`."""
+        count = self.resuming().comments
+        return f"{count} comment{'s' if count != 1 else ''}"
+
     def under_review(self, then, doing=""):
         """True when a review is on. Else it asks whether to start one, saying what was about to be done (`doing`); yes
         starts it and runs then(), cancel does nothing."""
@@ -67,9 +80,17 @@ class ReviewMixin:
                 self.start_review()
                 then()
 
-        what = f"{doing} starts a review of #{self.pr.number}." if doing else f"A review of #{self.pr.number} starts."
+        if self.resuming():
+            review = f"your pending review of #{self.pr.number} on {self.forge.label} ({self.pending_words()})"
+            what = f"{doing} resumes {review}." if doing else f"Resuming {review}."
+            title, button = "Resume your pending review", "Resume review"
+        else:
+            what = (
+                f"{doing} starts a review of #{self.pr.number}." if doing else f"A review of #{self.pr.number} starts."
+            )
+            title, button = "Start a review", "Start review"
         what += " Its drafts stay on this machine until you post them; nothing is sent now."
-        self.app.push_screen(ConfirmScreen("Start a review", what, "Start review"), answered)
+        self.app.push_screen(ConfirmScreen(title, what, button), answered)
         return False
 
     def start_review(self):
@@ -77,8 +98,12 @@ class ReviewMixin:
             return
         self.drafts.started = True
         self.save_drafts()
+        resumed = (
+            f"Resuming your pending review ({self.pending_words()}) on #{self.pr.number}" if self.resuming() else ""
+        )
         self.notify(
-            f"Reviewing #{self.pr.number}: c comments on a line, v shows what would be posted, D in it discards",
+            f"{resumed or f'Reviewing #{self.pr.number}'}: c comments on a line, v shows what would be posted, "
+            "D in it discards",
             timeout=6,
         )
 
@@ -110,6 +135,11 @@ class ReviewMixin:
             self.notify("review discarded; nothing was posted", timeout=4)
 
         what = f"The review of #{self.pr.number}{drafts} goes. Nothing was posted, and nothing will be."
+        if self.resuming():
+            what = (
+                f"The drafts of #{self.pr.number}{drafts.replace(' and its', ', its') if drafts else ''} go. "
+                f"Your pending review on {self.forge.label} stays as it is."
+            )
         self.app.push_screen(ConfirmScreen("Discard the review", what, "Discard"), answered)
 
     # The comment on the conversation: c on the Conversation tab, C anywhere. ctrl+s keeps it, then the bar asks for y.
@@ -173,6 +203,8 @@ class ReviewMixin:
         ink = self.app.painter.ink
         count = self.drafts.count()
         head = Text(f"Reviewing #{self.pr.number}: {count} draft{'s' if count != 1 else ''}  ", Style(bold=True))
+        if self.resuming():
+            head.append(f"resuming your pending review ({self.pending_words()})  ", ink("warn", bold=True))
         own = self.own_pr()
         for name in core.EVENTS if not own else ("COMMENT",):
             token = {"APPROVE": "ok", "REQUEST_CHANGES": "bad"}.get(name, "info")
