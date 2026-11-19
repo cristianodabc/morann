@@ -37,11 +37,13 @@ from morann.drafts import (  # noqa: F401
     DraftStore,
     HeadMoved,
     NotConfirmed,
+    PendingGone,
     PlanError,
     SubmitError,
     build_plan,
     line_context,
     pending_review,
+    resumed,
     submit,
 )
 from morann.forge import Capability, ForgeError, lacks, select  # noqa: F401
@@ -62,6 +64,7 @@ from morann.models import (  # noqa: F401
     DiffLine,
     File,
     Note,
+    PendingReview,
     PrRow,
     Scope,
     Thread,

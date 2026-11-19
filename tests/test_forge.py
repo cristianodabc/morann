@@ -35,7 +35,8 @@ def test_seam():
     for name in (
         "viewer_login organizations list_pull_requests list_scope fetch_pr build_pr head_sha post_review post_reply "
         "resolve_thread post_comment read_state apply_action update_branch behind_by parse_ref pr_url file_url "
-        "comment_url note_url commit_url checks_url owns_url read_file reader"
+        "comment_url note_url commit_url checks_url owns_url read_file reader pending_review add_pending_comment "
+        "add_pending_reply submit_pending_review"
     ).split():
         assert callable(getattr(forge.Forge, name)) and callable(getattr(GitHubProvider, name)), name
     github = GitHubProvider()

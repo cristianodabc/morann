@@ -14,6 +14,7 @@ from morann.models import (
     Commit,
     File,
     Note,
+    PendingReview,
     PrRow,
     PrState,
     PullRequest,
@@ -101,6 +102,21 @@ def pending_review(node: Node) -> tuple[int, str] | None:
         return None
     review = reviews[0]
     return int((review.get("comments") or {}).get("totalCount") or 0), review.get("updatedAt") or ""
+
+
+def resumable(node: Node, viewer: str) -> PendingReview | None:
+    """The viewer's own pending review of a pull request node, or None. GitHub shows a pending review only to its
+    author; one that is not the viewer's is ignored all the same, so it is never resumed."""
+    for review in (node.get("pendingReviews") or {}).get("nodes") or []:
+        if viewer and review and review.get("id") and login(review).casefold() == viewer.casefold():
+            return PendingReview(
+                id=review["id"],
+                comments=int((review.get("comments") or {}).get("totalCount") or 0),
+                body=review.get("body") or "",
+                commit=(review.get("commit") or {}).get("oid") or "",
+                updated=review.get("updatedAt") or "",
+            )
+    return None
 
 
 def review_requests(node: Node) -> tuple[tuple[str, str], ...]:
@@ -329,6 +345,7 @@ def build_pr(forge: Forge, repo: str, number: int, raw: Snapshot, stale: bool = 
         merge_state=node.get("mergeStateStatus") or "",
         review_decision=node.get("reviewDecision") or "",
         fetched=raw.get("fetched") or "",
+        pending=resumable(node, (data.get("viewer") or {}).get("login") or ""),
     )
 
 

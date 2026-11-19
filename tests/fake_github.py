@@ -303,6 +303,30 @@ def fixture(**extra):
     }
 
 
+def pending_review_node(author="me", comments=1, **fields):
+    """The viewer's review on GitHub that is not submitted yet, as the pull request query answers for it."""
+    return {
+        "id": "PRR_pending",
+        "body": "",
+        "updatedAt": "2026-11-05T08:00:00Z",
+        "commit": {"oid": HEAD},
+        "author": {"login": author},
+        "comments": {"totalCount": comments},
+        **fields,
+    }
+
+
+def pending_fixture(key="acme/app#7", **extra):
+    """Pull request #7 with the viewer's review pending on GitHub: one comment in it, on line 2 of lib/a.py, in a
+    thread of its own. Another person's pending review would not be shown, and Morann ignores it if one were."""
+    data = fixture(**extra)
+    node = data["prs"][key]["node"]
+    node["pendingReviews"] = {"nodes": [pending_review_node()]}
+    mine = comment(501, "me", "needs a docstring", created="2026-11-05T08:00:00Z", state="PENDING")
+    node["reviewThreads"]["nodes"].append(thread("T5", 2, comments=[mine], hunk="\n".join(PATCH_LINES[:3])))
+    return data
+
+
 def stack_fixture(**extra):
     """My pull requests: #21 is stacked on #20 and listed first, #22 has conflicts, #23 is a draft, #24 is current."""
 

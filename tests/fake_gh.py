@@ -119,7 +119,23 @@ def fake_gh(args):
             name = re.search(r"\{\s*(\w+)\(input", query)[1]
             if refuse(name):
                 return 1
+            if name == "submitPullRequestReview":  # a submitted review is no longer pending, on any pull request
+                for pull in data["prs"].values():
+                    nodes = (pull["node"].get("pendingReviews") or {}).get("nodes") or []
+                    for node in nodes:
+                        if node["id"] == variables["review"]:  # GitHub keeps the old body unless a new one comes
+                            body = variables["body"] if "body" in variables else node.get("body", "")
+                            data.setdefault("submitted", {})[node["id"]] = {"event": variables["event"], "body": body}
+                    pull["node"]["pendingReviews"] = {"nodes": [n for n in nodes if n["id"] != variables["review"]]}
+                save(path, data)
             return answer({"data": {name: {"ok": True}}})
+        if query.lstrip().startswith("query PendingReview"):  # the viewer's pending review alone, read before a resume
+            if refuse("pending"):
+                return 1
+            key = f"{variables['owner']}/{variables['name']}#{variables['number']}"
+            node = data["prs"][key]["node"]
+            pending = {"pendingReviews": node.get("pendingReviews") or {"nodes": []}}
+            return answer({"data": {"viewer": viewer, "repository": {"pullRequest": pending}}})
         if "pullRequest(" in query:
             key = f"{variables['owner']}/{variables['name']}#{variables['number']}"
             node = data["prs"].get(key)

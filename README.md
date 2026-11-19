@@ -187,6 +187,18 @@ While a review is on, the header says "Reviewing: N drafts". It ends when you po
 discard it (`D` in the bar, or `:review discard`, after a `y`). Every question is the same centered dialog: `y` or
 `enter` to go on, `n` or `esc` to cancel.
 
+A review you started and did not submit, on GitHub's own site or earlier from Morann, is resumed, not repeated. When
+the pull request loads, Morann finds your pending review (only you can see it): its comments show under their lines
+marked "pending on github.com", and the header says "Pending review: N comments". `c`, `R` and `v` then add to it, as
+drafts on your machine, and the review bar says "resuming your pending review". The one `y` that posts adds each draft
+comment and reply to that review and submits it with the verdict and summary you chose, so GitHub gets one review, not
+a second. The pending review is submitted only when the drafts hold an inline comment or a reply, or you chose a verdict
+(approve or request changes) or typed a summary; resolving threads and conversation comments alone leave it pending. A
+summary you type replaces the one on the review, and the bar shows the old text first; without one, the review keeps
+its own. Nothing is sent before that `y`, except a single comment you choose to send on its own. If the pending review
+was submitted or discarded elsewhere in the meantime, Morann reads it again, says so, sends nothing and keeps your
+drafts. Only your own pending review is ever read or touched.
+
 What you already posted can be changed too, when it is yours: `e` on your comment (on the diff or the conversation),
 your review summary, or the description of your own pull request opens the editor with its text, and a confirmation
 shows the change, old and new, before it is sent; `d` `d` on your comment shows it whole and asks before deleting it.

@@ -32,6 +32,7 @@ Write a class with the members of `forge.Forge`. Its docstrings are the contract
 | Lists | `list_pull_requests()`, `list_scope()` | Return `Lists` and `Page` of `PrRow`. |
 | One pull request | `fetch_pr()`, `build_pr()`, `head_sha()` | See "Snapshots" below. |
 | Review | `post_review()`, `post_reply()`, `resolve_thread()`, `post_comment()`, `post_line_comment()`, `edit_comment()`, `delete_comment()` | Each is one part of a confirmed plan, or one thing sent on its own after its own confirmation. |
+| Pending review | `pending_review()`, `add_pending_comment()`, `add_pending_reply()`, `submit_pending_review()` | Only with `Capability.PENDING_REVIEW`; see below. |
 | Actions | `read_state()`, `apply_action()`, `update_branch()`, `behind_by()` | |
 | Links | `parse_ref()`, `pr_url()`, `file_url()`, `comment_url()`, `note_url()`, `commit_url()`, `checks_url()`, `owns_url()` | Build every link from checked parts, on `host`. |
 | Files | `read_file()` | Returns `FileContent`: a file at a commit, to show the unchanged lines between hunks. |
@@ -56,6 +57,7 @@ that the logic and the UI switch on. Map your forge's states onto it:
 | `PrRow.decision`, `PullRequest.review_decision` | `APPROVED`, `CHANGES_REQUESTED`, `REVIEW_REQUIRED` or empty |
 | `PrRow.checks`, `PrState.checks` | `SUCCESS`, `FAILURE`, `ERROR`, `PENDING`, `EXPECTED` or empty |
 | `PrRow.pending` | `(comments, last change ISO time)` of the viewer's review started on the forge and not submitted, or `None`; it puts the row in the Pending tab |
+| `PullRequest.pending` | a `PendingReview` (its id, comment count, summary, head and last change) of the viewer's own unsubmitted review, or `None`; never another person's |
 | `mergeable` | `MERGEABLE`, `CONFLICTING`, `UNKNOWN` |
 | `merge_state` | `CLEAN`, `BEHIND`, `BLOCKED`, `DIRTY`, `DRAFT`, `HAS_HOOKS`, `UNSTABLE`, `UNKNOWN` |
 | `PullRequest.state`, `PrState.state` | `OPEN`, `CLOSED`, `MERGED` |
@@ -104,10 +106,20 @@ Read every file at one head commit. If the head moves while you read, read again
 | `DELETE_COMMENTS` | Posted comments cannot be deleted from Morann. Implement `delete_comment()` to offer it. |
 | `SINGLE_COMMENTS` | A comment on a diff line can only go in a review: with no review on, `c` offers to start one and nothing else. Implement `post_line_comment()` to offer it. |
 | `READ_FILES` | The unchanged lines between hunks stay folded: showing them reads the file at the head with `read_file()`. |
+| `PENDING_REVIEW` | A review the viewer started and did not submit is not resumed: the plan posts a new review with `post_review()`, and the forge's own refusal of a second one is shown as a warning. Implement the four pending review members to offer it. |
 
 An unavailable action is shown dimmed with the reason, for example "Bitbucket has no auto-merge", the same way an
 action the forge refuses for one pull request is shown. A method behind a capability you left out is never called,
 so it can raise `ForgeError`.
+
+A pending review is the viewer's review that is started and not submitted. With `PENDING_REVIEW`, `build_pr()` fills
+`PullRequest.pending` with it, and one confirmed submit calls `pending_review()` again, `add_pending_comment()` for each
+comment, `add_pending_reply()` for each reply and `submit_pending_review()` once, instead of `post_review()` and
+`post_reply()`. That happens only when the drafts hold review content (an inline comment, a reply, a summary or a
+verdict other than comment); resolves and conversation comments alone never touch it. `pending_review()` returns the
+viewer's own review only and `None` once it is gone, which stops the submit with the drafts kept. A forge without the
+capability that is handed a resumed plan sends nothing and says so, naming the forge ("Bare has no resuming a pending
+review").
 
 Things that differ per repository are data, not capabilities: `PrState.methods` lists the merge methods the
 repository allows, and `PrState.auto_merge_allowed` says whether it allows auto-merge.

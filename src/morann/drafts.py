@@ -10,6 +10,7 @@ import json
 import os
 import secrets
 import tempfile
+from collections.abc import Callable
 from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
@@ -240,6 +241,11 @@ class HeadMoved(Exception):
     """The pull request got new commits since the plan was made, so nothing was sent."""
 
 
+class PendingGone(Exception):
+    """The pending review the plan was made for is no longer on the forge: submitted, discarded or replaced there since
+    the pull request was read. Nothing was sent, and the drafts are kept."""
+
+
 class SubmitError(Exception):
     """A submit that stopped part way; `posted` lists what went out before it did."""
 
@@ -260,9 +266,10 @@ class Plan:
     resolves: tuple[Draft, ...]
     warnings: tuple[str, ...] = ()
     notes: tuple[Draft, ...] = ()  # ({id, body}, ...): comments on the conversation
+    resume: Draft | None = None  # the viewer's pending review this adds to and submits: {id, comments, summary, commit}
 
     def has_review(self) -> bool:
-        return self.event != "COMMENT" or bool(self.summary.strip()) or bool(self.comments)
+        return self.resume is not None or self.event != "COMMENT" or bool(self.summary.strip()) or bool(self.comments)
 
     def fingerprint(self) -> str:
         return hashlib.sha256(json.dumps(asdict(self), sort_keys=True).encode()).hexdigest()
@@ -271,13 +278,30 @@ class Plan:
         """What the confirmation screen lists: every action submit would take, in order."""
         out = [f"{self.repo}#{self.number} at {self.head[:7]}", ""]
         if self.has_review():
-            out.append(f"Review: {VERDICT[self.event]}")
-            out.append("Summary: " + (self.summary.strip() or "(none)"))
+            if self.resume is not None:
+                count = self.resume["comments"]
+                held = f"{count} comment{'s' if count != 1 else ''} already in it"
+                out.append(f"Review: {VERDICT[self.event]}, sent with your pending review ({held})")
+            else:
+                out.append(f"Review: {VERDICT[self.event]}")
+            existing = self.resume["summary"] if self.resume is not None else ""
+            if self.summary.strip():
+                out.append(f"Summary: {self.summary.strip()}")
+                if existing.strip():
+                    out.append("This replaces your existing summary:")
+                    out.extend("    " + line for line in existing.splitlines())
+            elif existing.strip():
+                out.append("Summary: (none new; your existing summary is kept)")
+                out.extend("    " + line for line in existing.splitlines())
+            else:
+                out.append("Summary: (none)")
             for c in self.comments:
                 out.append(f"Comment on {c['path']}:{c['line']} ({'new' if c['side'] == 'RIGHT' else 'old'} file):")
                 out.extend("    " + line for line in c["body"].splitlines() or [""])
         for r in self.replies:
-            out.append(f"Reply on {r['path']}:{r['line']}:")
+            out.append(
+                f"Reply on {r['path']}:{r['line']}{' (in the pending review)' if self.resume is not None else ''}:"
+            )
             out.extend("    " + line for line in r["body"].splitlines() or [""])
         for r in self.resolves:
             out.append(f"{'Resolve' if r['resolve'] else 'Unresolve'} thread on {r['path']}:{r['line']}")
@@ -296,6 +320,15 @@ def pending_review(forge: Forge) -> str:
     )
 
 
+def resumed(pr: PullRequest) -> Draft | None:
+    """The pending review a plan for this pull request resumes: the viewer's own, when the forge can add to one. A forge
+    that cannot keeps the old flow, which a pending review blocks (see pending_review)."""
+    if pr.pending is None or Capability.PENDING_REVIEW not in pr.forge.capabilities:
+        return None
+    pending = pr.pending
+    return {"id": pending.id, "comments": pending.comments, "summary": pending.body, "commit": pending.commit}
+
+
 def build_plan(pr: PullRequest, drafts: Drafts, event: str) -> Plan:
     """The plan for this verdict and these drafts, or a PlanError naming what to fix first."""
     if event not in EVENTS:
@@ -305,7 +338,9 @@ def build_plan(pr: PullRequest, drafts: Drafts, event: str) -> Plan:
         problems.append(f"{pr.forge.label} does not let you {VERDICT[event]} on your own pull request")
     if event == "REQUEST_CHANGES" and (missing := lacks(pr.forge, Capability.REQUEST_CHANGES)):
         problems.append(missing)
-    if event == "REQUEST_CHANGES" and not drafts.summary.strip():
+    resumable = resumed(pr)
+    kept = resumable is not None and resumable["summary"].strip()  # the pending review already has one
+    if event == "REQUEST_CHANGES" and not drafts.summary.strip() and not kept:
         problems.append("request changes needs a summary: press m")
     comments = []
     for c in drafts.comments:
@@ -341,7 +376,17 @@ def build_plan(pr: PullRequest, drafts: Drafts, event: str) -> Plan:
         problems.append(f"{missing}: remove the resolve marks (x)")
     if problems:
         raise PlanError("; ".join(problems))
-    pending = any(c.pending and c.author == pr.viewer for t in pr.threads for c in t.comments)
+    pending = pr.pending is not None or any(c.pending and c.author == pr.viewer for t in pr.threads for c in t.comments)
+    review_content = bool(comments or replies or drafts.summary.strip() or event != "COMMENT")
+    resume = resumable if review_content else None  # resolves and conversation comments never submit it
+    warnings = []
+    if resume is not None:
+        if resume["commit"] and resume["commit"] != pr.head:
+            warnings.append(
+                f"your pending review was started at {resume['commit'][:7]}; the pull request is at {pr.head[:7]} now"
+            )
+    elif pending and resumable is None:
+        warnings.append(pending_review(pr.forge))
     plan = Plan(
         repo=pr.repo,
         number=pr.number,
@@ -351,8 +396,9 @@ def build_plan(pr: PullRequest, drafts: Drafts, event: str) -> Plan:
         comments=tuple(comments),
         replies=tuple(replies),
         resolves=tuple(resolves),
-        warnings=(pending_review(pr.forge),) if pending else (),
+        warnings=tuple(warnings),
         notes=tuple(dict(n) for n in drafts.notes),
+        resume=resume,
     )
     if not plan.has_review() and not plan.replies and not plan.resolves and not plan.notes:
         raise PlanError("nothing to submit: add a comment (c), a reply (R), a summary (m) or a verdict (a or r)")
@@ -373,13 +419,16 @@ def moved(item: File, comment: Draft) -> bool:
 
 def submit(forge: Forge, plan: Plan, confirmed: str | None, store: DraftStore) -> list[str]:
     """Post the plan: one review with its inline comments, then each reply, each resolve or unresolve, and each
-    comment on the conversation.
+    comment on the conversation. A plan that resumes the viewer's pending review instead adds each comment and reply
+    to it, then submits it, so the forge gets one review, not two.
 
     `confirmed` must be the fingerprint of this plan as the confirmation screen showed it; anything else posts
     nothing. The head is read again first and nothing is posted when it moved. Each part that posts is removed from
     the drafts before the next one starts, so a failure part way leaves exactly the unsent parts as drafts."""
     if not confirmed or confirmed != plan.fingerprint():
         raise NotConfirmed("not confirmed on the confirmation screen; nothing was posted")
+    if plan.resume is not None and (missing := lacks(forge, Capability.PENDING_REVIEW)):
+        raise SubmitError(f"nothing was posted; {missing}", [])
     current = forge.head_sha(plan.repo, plan.number)
     if current != plan.head:
         raise HeadMoved(
@@ -405,14 +454,16 @@ def submit(forge: Forge, plan: Plan, confirmed: str | None, store: DraftStore) -
             ) from None
 
     try:
-        if plan.has_review():
+        if plan.resume is not None:
+            resume_review(forge, plan, plan.resume, forget)
+        elif plan.has_review():
             forge.post_review(plan)
             forget(
                 f"review ({VERDICT[plan.event]}, {len(plan.comments)} comments)",
                 *(c["id"] for c in plan.comments),
                 summary=True,
             )
-        for reply in plan.replies:
+        for reply in () if plan.resume is not None else plan.replies:  # a resumed review took them
             forge.post_reply(plan.repo, plan.number, int(reply["comment"]), reply["body"])
             forget(f"reply on {reply['path']}:{reply['line']}", reply["id"])
         for item in plan.resolves:
@@ -431,3 +482,24 @@ def submit(forge: Forge, plan: Plan, confirmed: str | None, store: DraftStore) -
             ) from None
         raise SubmitError(f"{done}{forge.label} refused the rest: {error}. The rest stays as drafts", posted) from None
     return posted
+
+
+def resume_review(forge: Forge, plan: Plan, resume: Draft, forget: Callable[..., None]) -> None:
+    """Add the plan's comments and replies to the viewer's pending review, then submit it with the plan's verdict. The
+    pending review is read again first: one that is gone, or is not the one the plan named, stops the submit before
+    anything is sent. Each part that is added leaves the drafts, so a failure part way keeps the rest."""
+    review_id = str(resume["id"])
+    found = forge.pending_review(plan.repo, plan.number)
+    if found is None or found.id != review_id:
+        raise PendingGone(
+            f"your pending review on {forge.label} changed: it was submitted, discarded or replaced there since this "
+            "pull request was read; nothing was posted and your drafts are kept. Reload with ctrl+r, then submit again"
+        )
+    for c in plan.comments:
+        forge.add_pending_comment(plan.repo, plan.number, review_id, c["path"], c["side"], int(c["line"]), c["body"])
+        forget(f"comment on {c['path']}:{c['line']} (pending)", c["id"])
+    for reply in plan.replies:
+        forge.add_pending_reply(plan.repo, plan.number, review_id, reply["thread"], reply["body"])
+        forget(f"reply on {reply['path']}:{reply['line']} (pending)", reply["id"])
+    forge.submit_pending_review(plan.repo, plan.number, review_id, plan.event, plan.summary)
+    forget(f"pending review ({VERDICT[plan.event]})", summary=True)
