@@ -5,6 +5,8 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+## 0.3.0 - 2026-11-19
+
 ### Added
 
 - A review you started and did not submit, on GitHub's own site or earlier from Morann, is resumed when you open the
