@@ -5,6 +5,8 @@ and the project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+## 0.1.0 - 2026-11-19
+
 ### Added
 
 - Morann, a pull request reviewer for the terminal. It lists your open pull requests, the ones waiting for your
